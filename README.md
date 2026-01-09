@@ -33,8 +33,7 @@ graph TD
     Node -->|JSON Result| Front
     Front -->|Visual Feedback| User
 
-
-    ✨ Funcionalidades
+✨ Funcionalidades
 Análisis de Sentimiento: Clasifica textos en Positivo, Negativo o Neutro.
 
 Detección de Subjetividad: Distingue entre hechos objetivos y opiniones personales.
