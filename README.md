@@ -24,8 +24,6 @@ Este proyecto implementa una arquitectura desacoplada para demostrar habilidades
 
 El flujo de datos sigue un patrón de microservicios:
 
-```mermaid
-graph TD
     User[Usuario] --> Front[React Frontend]
     Front -->|HTTP POST| Node[Node.js Server]
     Node -->|HTTP POST| Py[Python AI Service]
@@ -33,7 +31,7 @@ graph TD
     Node -->|JSON Result| Front
     Front -->|Visual Feedback| User
 
-    
+
 ✨ Funcionalidades
 Análisis de Sentimiento: Clasifica textos en Positivo, Negativo o Neutro.
 
