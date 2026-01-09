@@ -33,6 +33,7 @@ El flujo de datos sigue un patrón de microservicios:
 
 
 ✨ Funcionalidades
+
 Análisis de Sentimiento: Clasifica textos en Positivo, Negativo o Neutro.
 
 Detección de Subjetividad: Distingue entre hechos objetivos y opiniones personales.
@@ -44,6 +45,7 @@ UI Reactiva: Interfaz visual con retroalimentación de color y medidores dinámi
 Blindaje de Errores: Manejo robusto de fallos de conexión entre servicios.
 
 🚧 Roadmap (Próximos Pasos)
+
 El proyecto está en desarrollo activo. Estas son las funcionalidades planificadas para las siguientes versiones:
 
 [ ] Soporte Multi-idioma: Integrar traducción automática o modelos NLP para español.
