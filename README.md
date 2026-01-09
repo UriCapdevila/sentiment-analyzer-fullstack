@@ -33,6 +33,7 @@ graph TD
     Node -->|JSON Result| Front
     Front -->|Visual Feedback| User
 
+    
 ✨ Funcionalidades
 Análisis de Sentimiento: Clasifica textos en Positivo, Negativo o Neutro.
 
