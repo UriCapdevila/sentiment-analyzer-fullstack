@@ -1,0 +1,16 @@
+# Dependencias de Node
+node_modules/
+dist/
+.env
+
+# Entornos de Python y caché
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+ai-service/venv/
+ai-service/.venv/
+
+# Logs y archivos de sistema
+*.log
+.DS_Store
