@@ -41,6 +41,37 @@ export async function analyzeAndStoreReview(
   return toReviewResponse(record);
 }
 
+export async function analyzeDemoReview(body: unknown, env: Env, requestId: string): Promise<unknown> {
+  const input = validateReviewInput(body, env);
+  const { analysis, model, latencyMs } = await analyzeWithGemini(input.text, env, requestId);
+  const createdAt = new Date().toISOString();
+
+  console.log(
+    JSON.stringify({
+      level: 'info',
+      event: 'demo_review_analyzed',
+      requestId,
+      textLength: input.text.length,
+      label: analysis.label,
+      severity: analysis.severity,
+      churnRisk: analysis.churn_risk,
+      model,
+      latencyMs,
+    }),
+  );
+
+  return {
+    id: `demo-${crypto.randomUUID()}`,
+    original_text: input.text,
+    channel: input.channel || null,
+    customer_ref: input.customerRef || null,
+    product_area: input.productArea || null,
+    created_at: createdAt,
+    persisted: false,
+    analysis,
+  };
+}
+
 export async function listReviews(searchParams: URLSearchParams, env: Env): Promise<unknown> {
   const limit = clampInteger(Number(searchParams.get('limit') || DEFAULT_LIMIT), 1, MAX_LIMIT);
   const offset = clampInteger(Number(searchParams.get('offset') || 0), 0, 10_000);

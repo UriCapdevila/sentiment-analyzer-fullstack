@@ -1021,6 +1021,12 @@ mark {
   color: #08745c;
 }
 
+.live-pill.cache {
+  border-color: rgba(245, 158, 11, 0.36);
+  background: rgba(245, 158, 11, 0.1);
+  color: #8a5200;
+}
+
 .signal-summary > strong {
   display: block;
   margin-top: 18px;
@@ -1059,6 +1065,32 @@ mark {
   color: var(--ink-muted);
   font-size: 0.84rem;
   font-weight: 800;
+}
+
+.clear-history-button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.clear-history-button:hover:not(:disabled),
+.clear-history-button:focus-visible {
+  border-color: #b7c8d1;
+  background: var(--surface-soft);
+}
+
+.clear-history-button:disabled {
+  cursor: not-allowed;
+  color: var(--ink-muted);
+  background: #eef2f6;
 }
 
 .signal-list {

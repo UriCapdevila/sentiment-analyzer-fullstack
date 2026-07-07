@@ -4,6 +4,9 @@ import './App.css'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://insightpulse-api.uricapdevil4.workers.dev'
 const MAX_TEXT_LENGTH = 5000
+const DEMO_HISTORY_KEY = 'insightpulse.demoHistory.v1'
+const DEMO_HISTORY_TTL_MS = 30 * 60 * 1000
+const MAX_DEMO_HISTORY = 8
 
 const EXAMPLE_REVIEW = 'Me gusta que el producto sea facil de usar, pero el checkout falla seguido, soporte tarda demasiado y ya estoy evaluando otra opcion.'
 
@@ -25,78 +28,6 @@ const DEFAULT_INSIGHTS = {
   ],
   recent: [],
 }
-
-const DEFAULT_RECENT_REVIEWS = [
-  {
-    id: 'demo-1',
-    original_text: 'El checkout falla al pagar con tarjeta corporativa y soporte todavia no responde.',
-    channel: 'support',
-    customer_ref: 'enterprise-demo',
-    product_area: 'checkout',
-    created_at: new Date(Date.now() - 1000 * 60 * 34).toISOString(),
-    analysis: {
-      score: -0.72,
-      subjectivity: 0.74,
-      label: 'Negativo',
-      keywords: ['checkout', 'soporte', 'tarjeta corporativa'],
-      confidence: 0.91,
-      tone: 'frustrado',
-      severity: 'high',
-      summary: 'Friccion critica en pago con demora de soporte.',
-      recommended_action: 'Escalar a producto y soporte con prioridad alta.',
-      source: 'gemini',
-      categories: ['payments', 'support'],
-      churn_risk: 'high',
-      impact_score: 88,
-    },
-  },
-  {
-    id: 'demo-2',
-    original_text: 'La implementacion fue muy simple, aunque el reporte semanal necesita mas detalle.',
-    channel: 'survey',
-    customer_ref: 'growth-demo',
-    product_area: 'reporting',
-    created_at: new Date(Date.now() - 1000 * 60 * 92).toISOString(),
-    analysis: {
-      score: 0.18,
-      subjectivity: 0.58,
-      label: 'Mixto',
-      keywords: ['implementacion', 'reporte semanal', 'detalle'],
-      confidence: 0.87,
-      tone: 'constructivo',
-      severity: 'medium',
-      summary: 'Buen onboarding con oportunidad clara en reporting.',
-      recommended_action: 'Agregar detalle al reporte semanal y validar con cuentas Growth.',
-      source: 'gemini',
-      categories: ['onboarding', 'reporting'],
-      churn_risk: 'medium',
-      impact_score: 62,
-    },
-  },
-  {
-    id: 'demo-3',
-    original_text: 'El equipo esta contento, el tablero nos ayuda a ordenar prioridades cada semana.',
-    channel: 'sales',
-    customer_ref: 'midmarket-demo',
-    product_area: 'dashboard',
-    created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    analysis: {
-      score: 0.82,
-      subjectivity: 0.48,
-      label: 'Positivo',
-      keywords: ['tablero', 'prioridades', 'equipo'],
-      confidence: 0.89,
-      tone: 'satisfecho',
-      severity: 'low',
-      summary: 'Senal positiva sobre valor operativo del dashboard.',
-      recommended_action: 'Usar como caso para ventas y onboarding.',
-      source: 'gemini',
-      categories: ['dashboard', 'operations'],
-      churn_risk: 'low',
-      impact_score: 71,
-    },
-  },
-]
 
 const sentimentCopy = {
   Positivo: {
@@ -286,12 +217,6 @@ function normalizeReviewResponse(data) {
   }
 }
 
-function normalizeReviewsResponse(data) {
-  const reviews = Array.isArray(data?.data) ? data.data : []
-
-  return reviews.map(normalizeReviewResponse)
-}
-
 function getSentimentData(result) {
   if (!result) {
     return {
@@ -306,17 +231,64 @@ function getSentimentData(result) {
   return sentimentCopy[result.analysis.label] || sentimentCopy.Neutro
 }
 
+function readDemoHistory() {
+  try {
+    const rawHistory = window.sessionStorage.getItem(DEMO_HISTORY_KEY)
+
+    if (!rawHistory) return []
+
+    const cache = JSON.parse(rawHistory)
+
+    if (!cache?.expiresAt || cache.expiresAt <= Date.now()) {
+      window.sessionStorage.removeItem(DEMO_HISTORY_KEY)
+      return []
+    }
+
+    return Array.isArray(cache.reviews)
+      ? cache.reviews.map(normalizeReviewResponse).slice(0, MAX_DEMO_HISTORY)
+      : []
+  } catch {
+    return []
+  }
+}
+
+function writeDemoHistory(reviews) {
+  try {
+    window.sessionStorage.setItem(
+      DEMO_HISTORY_KEY,
+      JSON.stringify({
+        expiresAt: Date.now() + DEMO_HISTORY_TTL_MS,
+        reviews: reviews.slice(0, MAX_DEMO_HISTORY),
+      }),
+    )
+  } catch {
+    // sessionStorage can be unavailable in strict privacy modes.
+  }
+}
+
+function clearDemoHistory() {
+  try {
+    window.sessionStorage.removeItem(DEMO_HISTORY_KEY)
+  } catch {
+    // No-op: clearing cache is best effort.
+  }
+}
+
+function isSameDemoInput(review, input) {
+  return review.original_text === input.text
+    && (review.channel || 'manual') === input.channel
+    && (review.customer_ref || '') === input.customerRef
+    && (review.product_area || 'general') === input.productArea
+}
+
 function App() {
   const [text, setText] = useState('')
   const [channel, setChannel] = useState('manual')
   const [productArea, setProductArea] = useState('checkout')
   const [customerRef, setCustomerRef] = useState('cliente-demo')
   const [result, setResult] = useState(null)
-  const [insights, setInsights] = useState(DEFAULT_INSIGHTS)
-  const [insightsMode, setInsightsMode] = useState('demo')
-  const [recentReviews, setRecentReviews] = useState(DEFAULT_RECENT_REVIEWS)
-  const [recentMode, setRecentMode] = useState('demo')
-  const [recentLoading, setRecentLoading] = useState(true)
+  const [insights] = useState(DEFAULT_INSIGHTS)
+  const [recentReviews, setRecentReviews] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -325,68 +297,25 @@ function App() {
   const analysis = result?.analysis
 
   useEffect(() => {
-    let ignore = false
+    const cachedReviews = readDemoHistory()
+    setRecentReviews(cachedReviews)
 
-    async function loadInsights() {
-      try {
-        const response = await axios.get(`${API_URL}/api/insights?days=30`, { timeout: 3500 })
-
-        if (!ignore) {
-          setInsights(response.data)
-          setInsightsMode('live')
-
-          if (response.data?.recent?.length) {
-            setRecentReviews(response.data.recent.map(normalizeReviewResponse))
-            setRecentMode('live')
-          }
-        }
-      } catch {
-        if (!ignore) {
-          setInsights(DEFAULT_INSIGHTS)
-          setInsightsMode('demo')
-        }
-      }
-    }
-
-    loadInsights()
-
-    return () => {
-      ignore = true
+    if (cachedReviews[0]) {
+      setResult(cachedReviews[0])
     }
   }, [])
 
   useEffect(() => {
-    let ignore = false
+    if (!recentReviews.length) return undefined
 
-    async function loadRecentReviews() {
-      setRecentLoading(true)
+    const timeoutId = window.setTimeout(() => {
+      clearDemoHistory()
+      setRecentReviews([])
+      setResult(null)
+    }, DEMO_HISTORY_TTL_MS)
 
-      try {
-        const response = await axios.get(`${API_URL}/api/reviews?limit=8`, { timeout: 3500 })
-        const reviews = normalizeReviewsResponse(response.data)
-
-        if (!ignore) {
-          setRecentReviews(reviews.length ? reviews : [])
-          setRecentMode('live')
-        }
-      } catch {
-        if (!ignore) {
-          setRecentReviews(DEFAULT_RECENT_REVIEWS)
-          setRecentMode('demo')
-        }
-      } finally {
-        if (!ignore) {
-          setRecentLoading(false)
-        }
-      }
-    }
-
-    loadRecentReviews()
-
-    return () => {
-      ignore = true
-    }
-  }, [])
+    return () => window.clearTimeout(timeoutId)
+  }, [recentReviews])
 
   const polarityPercent = useMemo(() => {
     if (!analysis) return 68
@@ -422,24 +351,47 @@ function App() {
 
     if (!normalizedText) return
 
+    const demoInput = {
+      text: normalizedText,
+      channel,
+      customerRef,
+      productArea,
+    }
+    const cachedResult = recentReviews.find((review) => isSameDemoInput(review, demoInput))
+
+    if (cachedResult) {
+      setError('')
+      setResult(cachedResult)
+      setRecentReviews((current) => {
+        const nextReviews = [
+          cachedResult,
+          ...current.filter((review) => review.id !== cachedResult.id),
+        ].slice(0, MAX_DEMO_HISTORY)
+
+        writeDemoHistory(nextReviews)
+        return nextReviews
+      })
+
+      return
+    }
+
     setLoading(true)
     setError('')
 
     try {
-      const response = await axios.post(`${API_URL}/api/review`, {
-        text: normalizedText,
-        channel,
-        customerRef,
-        productArea,
-      })
+      const response = await axios.post(`${API_URL}/api/demo/review`, demoInput)
       const normalizedResult = normalizeReviewResponse(response.data)
 
       setResult(normalizedResult)
-      setRecentReviews((current) => [
-        normalizedResult,
-        ...current.filter((review) => review.id !== normalizedResult.id),
-      ].slice(0, 8))
-      setRecentMode('live')
+      setRecentReviews((current) => {
+        const nextReviews = [
+          normalizedResult,
+          ...current.filter((review) => review.id !== normalizedResult.id),
+        ].slice(0, MAX_DEMO_HISTORY)
+
+        writeDemoHistory(nextReviews)
+        return nextReviews
+      })
     } catch (err) {
       setError(getApiErrorMessage(err))
       console.error(err)
@@ -454,6 +406,12 @@ function App() {
     setProductArea('checkout')
     setCustomerRef('cuenta-enterprise-demo')
     setError('')
+  }
+
+  const handleClearDemoHistory = () => {
+    clearDemoHistory()
+    setRecentReviews([])
+    setResult(null)
   }
 
   return (
@@ -585,7 +543,7 @@ function App() {
           <div className="ops-main">
             <div className="ops-header">
               <span>Live topic map</span>
-              <strong>{insightsMode === 'live' ? 'Live data' : 'Mock data'}</strong>
+              <strong>Product mock</strong>
             </div>
             <div className="topic-list">
               {insights.topTopics.map((topic, index) => (
@@ -650,7 +608,7 @@ function App() {
           <p className="eyebrow">Demo funcional</p>
           <h2>Proba el motor de analisis con contexto comercial.</h2>
           <p>
-            Esta demo ya consulta la API cloud cuando esta disponible. El contenido de la pagina puede ser mock, pero este flujo esta conectado al Worker.
+            Esta demo consulta la API cloud, pero no guarda resultados en la base real. El historial queda temporalmente en este navegador.
           </p>
         </div>
 
@@ -775,18 +733,18 @@ function App() {
 
       <section className="signal-section" id="signals">
         <div className="signal-copy">
-          <p className="eyebrow">Historial operativo</p>
-          <h2>Las opiniones ya no se pierden: quedan como senales accionables.</h2>
+          <p className="eyebrow">Demo cache</p>
+          <h2>La demo tiene memoria temporal, el producto real guarda datos reales.</h2>
           <p>
-            Cada analisis se guarda y vuelve como una linea de tiempo para detectar urgencias, patrones y oportunidades sin esperar a una reunion semanal.
+            Las pruebas publicas viven solo en cache de sesion y se eliminan automaticamente. La base D1 queda reservada para clientes reales y uso autenticado.
           </p>
         </div>
 
         <div className="signal-grid">
           <aside className="signal-summary">
-            <span className={`live-pill ${recentMode}`}>{recentMode === 'live' ? 'Datos live' : 'Modo demo'}</span>
+            <span className="live-pill cache">Cache temporal</span>
             <strong>{recentReviews.length}</strong>
-            <p>senales recientes disponibles para lectura operativa.</p>
+            <p>senales de demo guardadas solo en este navegador por 30 minutos.</p>
 
             <dl>
               <div>
@@ -802,24 +760,21 @@ function App() {
                 <dd>area mas reciente</dd>
               </div>
             </dl>
+
+            <button className="clear-history-button" type="button" onClick={handleClearDemoHistory} disabled={!recentReviews.length}>
+              Limpiar historial demo
+            </button>
           </aside>
 
           <div className="signal-list" aria-live="polite">
-            {recentLoading && (
+            {recentReviews.length === 0 && (
               <article className="signal-card empty">
-                <span>Cargando historial...</span>
-                <p>Consultando las ultimas opiniones guardadas en la API.</p>
+                <span>Sin historial de demo</span>
+                <p>Analiza una opinion para crear una senal temporal. No se va a guardar en D1.</p>
               </article>
             )}
 
-            {!recentLoading && recentReviews.length === 0 && (
-              <article className="signal-card empty">
-                <span>Sin historial todavia</span>
-                <p>Analiza una opinion desde la demo para crear la primera senal real.</p>
-              </article>
-            )}
-
-            {!recentLoading && recentReviews.map((review) => {
+            {recentReviews.map((review) => {
               const reviewSentiment = getSentimentData(review)
               const reviewImpact = normalizeImpactScore(review.analysis?.impact_score)
 
@@ -860,7 +815,7 @@ function App() {
           <p className="eyebrow">Developers</p>
           <h2>API simple hoy, arquitectura lista para crecer.</h2>
           <p>
-            El MVP ya separa frontend, Worker, AI Gateway y persistencia. El siguiente salto es autenticacion, multi-tenant y webhooks.
+            La demo publica usa un endpoint no persistente. La API de producto mantiene el endpoint persistente para clientes reales, autenticacion, multi-tenant y webhooks.
           </p>
         </div>
 
@@ -871,7 +826,16 @@ function App() {
             <span></span>
             <strong>review.create</strong>
           </div>
-          <pre>{`POST /api/review
+          <pre>{`POST /api/demo/review
+// Demo publica: analiza sin guardar en D1.
+{
+  "text": "Checkout falla y soporte demora",
+  "channel": "support",
+  "productArea": "checkout"
+}
+
+POST /api/review
+// Producto real: analiza y persiste para clientes.
 {
   "text": "Checkout falla y soporte demora",
   "channel": "support",

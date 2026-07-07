@@ -1,4 +1,4 @@
-import { analyzeAndStoreReview, getInsights, listReviews } from './services/feedback-service';
+import { analyzeAndStoreReview, analyzeDemoReview, getInsights, listReviews } from './services/feedback-service';
 import { createCorsHeaders, handleOptions } from './http/cors';
 import { errorResponse, jsonResponse, notFoundResponse } from './http/responses';
 import { parseJsonBody } from './http/request';
@@ -30,6 +30,12 @@ export async function handleRequest(request: Request, env: Env, ctx: ExecutionCo
       const body = await parseJsonBody(request);
       const result = await analyzeAndStoreReview(body, env, ctx, requestId);
       return jsonResponse(result, { headers: corsHeaders, requestId, status: 201 });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/demo/review') {
+      const body = await parseJsonBody(request);
+      const result = await analyzeDemoReview(body, env, requestId);
+      return jsonResponse(result, { headers: corsHeaders, requestId });
     }
 
     if (request.method === 'GET' && url.pathname === '/api/reviews') {
