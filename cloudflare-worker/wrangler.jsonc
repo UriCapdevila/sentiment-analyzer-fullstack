@@ -9,7 +9,7 @@
     "head_sampling_rate": 1
   },
   "vars": {
-    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173,https://insightpulse-web.pages.dev,https://*.insightpulse-web.pages.dev",
     "AI_GATEWAY_ACCOUNT_ID": "144b012e525a7ed50a877cd8a3787bdb",
     "AI_GATEWAY_NAME": "insightpulse",
     "GEMINI_MODEL": "gemini-2.5-flash",
