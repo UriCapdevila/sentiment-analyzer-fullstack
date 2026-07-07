@@ -1,119 +1,69 @@
-# 🔮 Sentiment Analyzer - Full Stack AI App
+# Sentiment Analyzer - Full Stack AI App
 
-Una aplicación web moderna que utiliza **Procesamiento de Lenguaje Natural (NLP)** para analizar reseñas de usuarios en tiempo real. Detecta polaridad (positivo/negativo), subjetividad y extrae palabras clave mediante una arquitectura de microservicios.
+Aplicacion fullstack para analizar feedback de usuarios con NLP. El objetivo es evolucionarla desde un detector basico de sentimientos hacia una plataforma de insights para resenas, comentarios y feedback de producto.
 
-![Estado](https://img.shields.io/badge/Estado-En_Proceso-yellow)
+![Estado](https://img.shields.io/badge/Estado-En_desarrollo-yellow)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-blue)
 
-## 📸 Demo
+## Demo
 
-Así se ve la aplicación analizando un comentario positivo:
+![Captura de pantalla del analisis](./imagenes/IA-comentarios.png)
 
-![Captura de pantalla del análisis](./imagenes/IA-comentarios.png)
-*Análisis de sentimiento con detección de palabras clave y polaridad.*
+## Propuesta de valor
 
-## 🚀 Tecnologías (The "Holy Trinity")
+El proyecto permite enviar una resena, procesarla con un microservicio de IA y devolver:
 
-Este proyecto implementa una arquitectura desacoplada para demostrar habilidades Full Stack y Data Science:
+- sentimiento: positivo, negativo o neutro
+- polaridad numerica
+- subjetividad
+- palabras clave detectadas
 
-* **Frontend:** React (Vite) + CSS Modules.
-* **Backend Orchestrator:** Node.js (Express) - Gestiona peticiones y seguridad.
-* **AI Microservice:** Python (FastAPI + TextBlob) - Motor de análisis de datos.
+El siguiente paso natural es convertir esos analisis individuales en historial, tendencias, temas frecuentes y recomendaciones accionables.
 
-## 🏗️ Arquitectura
+## Arquitectura
 
-El flujo de datos sigue un patrón de microservicios:
+Arquitectura local actual:
 
-    User[Usuario] --> Front[React Frontend]
-    Front -->|HTTP POST| Node[Node.js Server]
-    Node -->|HTTP POST| Py[Python AI Service]
-    Py -->|JSON Analysis| Node
-    Node -->|JSON Result| Front
-    Front -->|Visual Feedback| User
+```text
+Usuario
+  -> React + Vite
+  -> Node.js + Express API Gateway
+  -> Python + FastAPI AI Service
+  -> TextBlob NLP
+```
 
+Arquitectura objetivo para el MVP SaaS en Cloudflare:
 
-✨ Funcionalidades
+```text
+Cloudflare Pages
+  -> Cloudflare Worker API
+  -> Cloudflare AI Gateway
+  -> Google Gemini API
+  -> Cloudflare D1
+```
 
-Análisis de Sentimiento: Clasifica textos en Positivo, Negativo o Neutro.
+### Servicios
 
-Detección de Subjetividad: Distingue entre hechos objetivos y opiniones personales.
+- `frontend`: interfaz React.
+- `backend`: API Gateway en Express. Valida input, aplica CORS, llama al servicio de IA y normaliza errores.
+- `ai-service`: microservicio FastAPI con TextBlob.
+- `cloudflare-worker`: API cloud serverless para analizar feedback, persistir historial y exponer insights.
 
-Extracción de Keywords: Identifica los tópicos principales (Sustantivos) de la reseña.
+## Endpoints
 
-UI Reactiva: Interfaz visual con retroalimentación de color y medidores dinámicos.
+Backend:
 
-Blindaje de Errores: Manejo robusto de fallos de conexión entre servicios.
+- `GET /health`: estado del gateway.
+- `POST /api/review`: analiza una resena.
 
-🚧 Roadmap (Próximos Pasos)
+AI service:
 
-El proyecto está en desarrollo activo. Estas son las funcionalidades planificadas para las siguientes versiones:
+- `GET /health`: estado del servicio de IA.
+- `POST /analyze`: analiza texto y devuelve el resultado NLP.
 
-[ ] Soporte Multi-idioma: Integrar traducción automática o modelos NLP para español.
+## Respuesta de ejemplo
 
-[ ] Base de Datos: Persistencia de análisis históricos usando SQLite/PostgreSQL.
-
-[ ] Autenticación: Login de usuarios para guardar historiales personales.
-
-[ ] Deploy: Despliegue en la nube (Render/Vercel/AWS).
-
-[ ] Mejoras UI: Modo oscuro y gráficos estadísticos avanzados.
-
-📂 Estructura del Proyecto
-Bash
-
-sentiment-analyzer-fullstack/
-├── ai-service/        # Microservicio Python (FastAPI + TextBlob)
-│   ├── main.py        # Lógica de NLP y Endpoints
-│   └── requirements.txt
-├── backend/           # API Gateway (Node.js + Express)
-│   └── server.js      # Orquestación de servicios
-├── frontend/          # UI (React + Vite)
-│   ├── src/
-│   └── package.json
-├── screenshots/       # Imágenes para documentación
-│   └── demo-result.png
-└── README.md
-📦 Instalación y Ejecución
-Como es un proyecto de múltiples servicios, se requiere levantar cada parte por separado.
-
-1. Clonar el repositorio
-Bash
-
-git clone [https://github.com/UriCapdevila/sentiment-analyzer-fullstack.git](https://github.com/UriCapdevila/sentiment-analyzer-fullstack.git)
-cd sentiment-analyzer-fullstack
-2. Servicio de IA (Python)
-Bash
-
-cd ai-service
-python -m venv venv
-# Windows: venv\Scripts\activate  |  Mac/Linux: source venv/bin/activate
-pip install fastapi uvicorn textblob
-python -m textblob.download_corpora
-python -m uvicorn main:app --reload
-# Corre en puerto 8000
-3. Backend (Node.js)
-En una nueva terminal:
-
-Bash
-
-cd backend
-npm install
-node server.js
-# Corre en puerto 3000
-4. Frontend (React)
-En una nueva terminal:
-
-Bash
-
-cd frontend
-npm install
-npm run dev
-# Corre en puerto 5173 (generalmente)
-🧪 Ejemplo de uso (JSON Response)
-El servicio de Python devuelve un análisis detallado:
-
-JSON
-
+```json
 {
   "analysis": {
     "score": 0.75,
@@ -123,5 +73,132 @@ JSON
   },
   "original_text": "I love the user interface and the performance is great."
 }
-👤 Autor
-Uriel Capdevila Desarrollador Full Stack & Data Scientist
+```
+
+## Instalacion
+
+### 1. AI service
+
+```bash
+cd ai-service
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python -m textblob.download_corpora
+python -m uvicorn main:app --reload
+```
+
+El servicio corre por defecto en `http://127.0.0.1:8000`.
+
+Variables opcionales para usar un LLM como motor principal:
+
+```bash
+copy .env.example .env
+```
+
+```env
+ANALYSIS_PROVIDER=auto
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-3.5-flash
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.5
+LLM_TIMEOUT_SECONDS=25
+```
+
+Proveedores disponibles:
+
+- `auto`: usa Gemini si existe `GEMINI_API_KEY`; si no, usa OpenAI si existe `OPENAI_API_KEY`; si no hay key o falla el proveedor, vuelve al analizador local.
+- `gemini`: fuerza Gemini API.
+- `openai`: fuerza OpenAI API.
+- `local`: fuerza TextBlob + reglas de producto.
+
+Para prototipos con Gemini Free, usa solo datos ficticios, anonimizados o resenas publicas. Para datos reales de clientes, conviene pasar a un plan/proveedor con compromiso de no usar contenido para mejorar productos.
+
+### 2. Backend
+
+```bash
+cd backend
+npm install
+copy .env.example .env
+npm run dev
+```
+
+Variables disponibles:
+
+```env
+PORT=3000
+AI_SERVICE_URL=http://127.0.0.1:8000
+AI_TIMEOUT_MS=5000
+MAX_TEXT_LENGTH=5000
+CORS_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
+```
+
+### 3. Frontend
+
+```bash
+cd frontend
+npm install
+copy .env.example .env
+npm run dev
+```
+
+Variable disponible:
+
+```env
+VITE_API_URL=http://localhost:3000
+```
+
+Para probar contra el Worker desplegado, `VITE_API_URL` debe apuntar al dominio del Worker o a la ruta conectada en Cloudflare Pages.
+
+### 4. Cloudflare Worker
+
+```bash
+cd cloudflare-worker
+npm install
+copy .dev.vars.example .dev.vars
+npm run cf-typegen
+npm run db:migrate:local
+npm run dev
+```
+
+Ver detalles de D1, secrets y deploy en `cloudflare-worker/README.md`.
+
+## Roadmap recomendado
+
+### Fase 1: base seria
+
+- configuracion por entorno
+- health checks
+- validacion de input
+- timeouts entre servicios
+- errores consistentes
+- dependencias reproducibles
+
+### Fase 2: producto
+
+- persistencia con SQLite o PostgreSQL
+- historial de analisis
+- dashboard con metricas
+- paginacion y filtros
+- tests de backend, AI service y frontend
+
+### Fase 3: IA mejorada
+
+- deteccion de idioma
+- soporte real para espanol
+- clasificacion por categorias: soporte, precio, UX, performance
+- resumen de insights
+- comparacion historica por periodo
+
+### Fase 4: produccion
+
+- Docker Compose
+- rate limiting
+- logs estructurados
+- request IDs
+- CI con lint, build y tests
+- deploy en Vercel/Cloudflare + Render/Fly/Railway
+
+## Autor
+
+Uriel Capdevila - Full Stack Developer & Data Science enthusiast

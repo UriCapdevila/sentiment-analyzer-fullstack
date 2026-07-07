@@ -1,0 +1,19 @@
+{
+  "name": "insightpulse-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "typecheck": "tsc --noEmit",
+    "db:migrate:local": "wrangler d1 migrations apply insightpulse-feedback --local",
+    "db:migrate:remote": "wrangler d1 migrations apply insightpulse-feedback --remote"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.53.0"
+  }
+}

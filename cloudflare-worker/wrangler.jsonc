@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "insightpulse-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-05",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
+    "AI_GATEWAY_ACCOUNT_ID": "144b012e525a7ed50a877cd8a3787bdb",
+    "AI_GATEWAY_NAME": "insightpulse",
+    "GEMINI_MODEL": "gemini-2.5-flash",
+    "MAX_TEXT_LENGTH": "5000",
+    "LLM_TIMEOUT_MS": "25000"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "insightpulse-feedback",
+      "database_id": "51ce0aa8-d55a-4e65-a0c7-92812f326ce0",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
