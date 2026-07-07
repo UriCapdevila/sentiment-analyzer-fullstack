@@ -166,6 +166,9 @@ export function toReviewResponse(record: ReviewRecord): ReviewResponse {
   return {
     id: record.id,
     original_text: record.original_text,
+    channel: record.channel,
+    customer_ref: record.customer_ref,
+    product_area: record.product_area,
     created_at: record.created_at,
     analysis: {
       score: record.score,

@@ -53,5 +53,8 @@ export type ReviewResponse = {
   id: string;
   analysis: SentimentAnalysis;
   original_text: string;
+  channel: string | null;
+  customer_ref: string | null;
+  product_area: string | null;
   created_at: string;
 };

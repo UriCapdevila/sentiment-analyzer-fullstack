@@ -13,6 +13,7 @@ const SYSTEM_INSTRUCTION = [
   'Strongly weight churn risk, cancellation, refunds, billing, support delays, bugs, UX friction, pricing complaints, reliability, and checkout failures.',
   'Use Mixto when feedback contains both clear praise and clear friction.',
   'Return concise Spanish business-facing fields.',
+  'impact_score must be an integer from 0 to 100, where 100 means urgent business impact.',
 ].join(' ');
 
 export async function analyzeWithGemini(text: string, env: Env, requestId: string): Promise<GeminiResult> {
@@ -171,8 +172,18 @@ function normalizeAnalysis(value: unknown): SentimentAnalysis {
     source: 'gemini',
     categories: normalizeList(analysis.categories, 6),
     churn_risk: normalizeRisk(analysis.churn_risk),
-    impact_score: Math.round(clampNumber(analysis.impact_score, 0, 100)),
+    impact_score: normalizeImpactScore(analysis.impact_score),
   };
+}
+
+function normalizeImpactScore(value: unknown): number {
+  const score = clampNumber(value, 0, 100);
+
+  if (score > 0 && score <= 10) {
+    return Math.round(score * 10);
+  }
+
+  return Math.round(score);
 }
 
 function clampNumber(value: unknown, min: number, max: number): number {
