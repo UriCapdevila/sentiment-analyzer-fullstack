@@ -9,6 +9,7 @@ Esta carpeta explica la solucion en lenguaje no tecnico para que puedas ponerte 
 3. Lee `03-secciones-del-sistema.md` para entender que hace cada carpeta.
 4. Revisa `04-cambios-realizados.md` para ver que mejoramos en esta iteracion.
 5. Usa `05-proximos-pasos.md` para decidir hacia donde llevar el producto.
+6. Consulta `06-despliegue-cloudflare.md` para entender como queda conectado el despliegue cloud.
 
 ## Objetivo del proyecto
 
