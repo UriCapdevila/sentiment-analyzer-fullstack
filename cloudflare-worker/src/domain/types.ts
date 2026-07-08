@@ -9,6 +9,14 @@ export type ReviewInput = {
   productArea?: string;
 };
 
+export type WorkspaceSession = {
+  workspaceId: string;
+  name: string;
+  plan: 'solo' | 'growth' | 'scale';
+  status: 'active' | 'paused' | 'cancelled';
+  monthlyAnalysisLimit: number;
+};
+
 export type SentimentAnalysis = {
   score: number;
   subjectivity: number;
@@ -27,6 +35,7 @@ export type SentimentAnalysis = {
 
 export type ReviewRecord = {
   id: string;
+  workspace_id: string | null;
   original_text: string;
   channel: string | null;
   customer_ref: string | null;
@@ -51,6 +60,7 @@ export type ReviewRecord = {
 
 export type ReviewResponse = {
   id: string;
+  workspace_id?: string | null;
   analysis: SentimentAnalysis;
   original_text: string;
   channel: string | null;

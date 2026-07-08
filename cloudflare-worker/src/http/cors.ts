@@ -6,7 +6,7 @@ export function createCorsHeaders(request: Request, env: Env): Headers {
   return new Headers({
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-    'Access-Control-Allow-Headers': 'content-type,x-request-id',
+    'Access-Control-Allow-Headers': 'authorization,content-type,x-request-id,x-workspace-key',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   });

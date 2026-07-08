@@ -2,6 +2,7 @@ import { ReviewInput, ReviewRecord, ReviewResponse, SentimentAnalysis } from '..
 
 type StoredReviewInput = {
   id: string;
+  workspaceId: string;
   input: ReviewInput;
   analysis: SentimentAnalysis;
   model: string;
@@ -9,6 +10,7 @@ type StoredReviewInput = {
 };
 
 type ListReviewsOptions = {
+  workspaceId: string;
   limit: number;
   offset: number;
 };
@@ -22,6 +24,7 @@ export async function insertReview(db: D1Database, review: StoredReviewInput): P
       .prepare(
         `INSERT INTO feedback_reviews (
           id,
+          workspace_id,
           original_text,
           channel,
           customer_ref,
@@ -42,10 +45,11 @@ export async function insertReview(db: D1Database, review: StoredReviewInput): P
           model,
           provider_latency_ms,
           created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         review.id,
+        review.workspaceId,
         review.input.text,
         review.input.channel || null,
         review.input.customerRef || null,
@@ -75,6 +79,7 @@ export async function insertReview(db: D1Database, review: StoredReviewInput): P
 
   return {
     id: review.id,
+    workspace_id: review.workspaceId,
     original_text: review.input.text,
     channel: review.input.channel || null,
     customer_ref: review.input.customerRef || null,
@@ -103,16 +108,30 @@ export async function selectReviews(db: D1Database, options: ListReviewsOptions)
     .prepare(
       `SELECT *
        FROM feedback_reviews
+       WHERE workspace_id = ?
        ORDER BY created_at DESC
        LIMIT ? OFFSET ?`,
     )
-    .bind(options.limit, options.offset)
+    .bind(options.workspaceId, options.limit, options.offset)
     .all<ReviewRecord>();
 
   return result.results || [];
 }
 
-export async function selectInsights(db: D1Database, sinceIso: string): Promise<{
+export async function countReviewsSince(db: D1Database, workspaceId: string, sinceIso: string): Promise<number> {
+  const result = await db
+    .prepare(
+      `SELECT COUNT(*) AS total
+       FROM feedback_reviews
+       WHERE workspace_id = ? AND created_at >= ?`,
+    )
+    .bind(workspaceId, sinceIso)
+    .first<{ total: number }>();
+
+  return Number(result?.total || 0);
+}
+
+export async function selectInsights(db: D1Database, workspaceId: string, sinceIso: string): Promise<{
   totals: Record<string, number>;
   topics: Array<{ topic: string; topic_type: string; count: number }>;
   recent: ReviewRecord[];
@@ -128,30 +147,31 @@ export async function selectInsights(db: D1Database, sinceIso: string): Promise<
           SUM(CASE WHEN churn_risk = 'high' THEN 1 ELSE 0 END) AS high_churn_risk,
           AVG(impact_score) AS avg_impact_score
         FROM feedback_reviews
-        WHERE created_at >= ?`,
+        WHERE workspace_id = ? AND created_at >= ?`,
       )
-      .bind(sinceIso)
+      .bind(workspaceId, sinceIso)
       .first<Record<string, number>>(),
     db
       .prepare(
-        `SELECT topic, topic_type, COUNT(*) AS count
-         FROM feedback_topics
-         WHERE created_at >= ?
-         GROUP BY topic, topic_type
+        `SELECT ft.topic, ft.topic_type, COUNT(*) AS count
+         FROM feedback_topics ft
+         INNER JOIN feedback_reviews fr ON fr.id = ft.review_id
+         WHERE fr.workspace_id = ? AND ft.created_at >= ?
+         GROUP BY ft.topic, ft.topic_type
          ORDER BY count DESC, topic ASC
          LIMIT 10`,
       )
-      .bind(sinceIso)
+      .bind(workspaceId, sinceIso)
       .all<{ topic: string; topic_type: string; count: number }>(),
     db
       .prepare(
         `SELECT *
          FROM feedback_reviews
-         WHERE created_at >= ?
+         WHERE workspace_id = ? AND created_at >= ?
          ORDER BY created_at DESC
          LIMIT 5`,
       )
-      .bind(sinceIso)
+      .bind(workspaceId, sinceIso)
       .all<ReviewRecord>(),
   ]);
 
@@ -165,6 +185,7 @@ export async function selectInsights(db: D1Database, sinceIso: string): Promise<
 export function toReviewResponse(record: ReviewRecord): ReviewResponse {
   return {
     id: record.id,
+    workspace_id: record.workspace_id,
     original_text: record.original_text,
     channel: record.channel,
     customer_ref: record.customer_ref,

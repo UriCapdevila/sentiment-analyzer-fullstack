@@ -5,6 +5,7 @@ import './App.css'
 const API_URL = import.meta.env.VITE_API_URL || 'https://insightpulse-api.uricapdevil4.workers.dev'
 const MAX_TEXT_LENGTH = 5000
 const DEMO_HISTORY_KEY = 'insightpulse.demoHistory.v1'
+const AUTH_STORAGE_KEY = 'insightpulse.auth.v1'
 const DEMO_HISTORY_TTL_MS = 30 * 60 * 1000
 const MAX_DEMO_HISTORY = 8
 
@@ -274,6 +275,44 @@ function clearDemoHistory() {
   }
 }
 
+function readAuthSession() {
+  try {
+    const rawSession = window.localStorage.getItem(AUTH_STORAGE_KEY)
+
+    if (!rawSession) return null
+
+    const session = JSON.parse(rawSession)
+
+    if (!session?.token || !session?.workspace) {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY)
+      return null
+    }
+
+    if (session.expires_at && new Date(session.expires_at).getTime() <= Date.now()) {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY)
+      return null
+    }
+
+    return session
+  } catch {
+    return null
+  }
+}
+
+function writeAuthSession(session) {
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session))
+}
+
+function clearAuthSession() {
+  window.localStorage.removeItem(AUTH_STORAGE_KEY)
+}
+
+function authHeaders(session) {
+  return {
+    Authorization: `Bearer ${session.token}`,
+  }
+}
+
 function isSameDemoInput(review, input) {
   return review.original_text === input.text
     && (review.channel || 'manual') === input.channel
@@ -282,6 +321,12 @@ function isSameDemoInput(review, input) {
 }
 
 function App() {
+  const isPrivateApp = window.location.pathname.startsWith('/app')
+
+  return isPrivateApp ? <PrivateApp /> : <LandingApp />
+}
+
+function LandingApp() {
   const [text, setText] = useState('')
   const [channel, setChannel] = useState('manual')
   const [productArea, setProductArea] = useState('checkout')
@@ -431,7 +476,7 @@ function App() {
 
         <div className="header-actions">
           <a href="#demo">Demo</a>
-          <a className="header-cta" href="#pricing">Empezar</a>
+          <a className="header-cta" href="/app">Ingresar</a>
         </div>
       </header>
 
@@ -915,6 +960,349 @@ POST /api/review
         <span>MVP SaaS de inteligencia de feedback</span>
         <span>Cloudflare + LLM + D1</span>
       </footer>
+    </main>
+  )
+}
+
+function PrivateApp() {
+  const [session, setSession] = useState(() => readAuthSession())
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [loginError, setLoginError] = useState('')
+  const [appLoading, setAppLoading] = useState(Boolean(session))
+  const [appError, setAppError] = useState('')
+  const [appInsights, setAppInsights] = useState(DEFAULT_INSIGHTS)
+  const [appReviews, setAppReviews] = useState([])
+  const [appText, setAppText] = useState('')
+  const [appChannel, setAppChannel] = useState('manual')
+  const [appProductArea, setAppProductArea] = useState('general')
+  const [appCustomerRef, setAppCustomerRef] = useState('')
+  const [appResult, setAppResult] = useState(null)
+  const [appSubmitting, setAppSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!session) return
+
+    loadPrivateData(session)
+  }, [session])
+
+  async function loadPrivateData(activeSession) {
+    setAppLoading(true)
+    setAppError('')
+
+    try {
+      const [insightsResponse, reviewsResponse] = await Promise.all([
+        axios.get(`${API_URL}/api/insights?days=30`, { headers: authHeaders(activeSession) }),
+        axios.get(`${API_URL}/api/reviews?limit=8`, { headers: authHeaders(activeSession) }),
+      ])
+
+      setAppInsights(insightsResponse.data)
+      setAppReviews(Array.isArray(reviewsResponse.data?.data)
+        ? reviewsResponse.data.data.map(normalizeReviewResponse)
+        : [])
+    } catch (err) {
+      setAppError(getApiErrorMessage(err))
+
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        clearAuthSession()
+        setSession(null)
+      }
+    } finally {
+      setAppLoading(false)
+    }
+  }
+
+  const handleLogin = async (event) => {
+    event.preventDefault()
+    setLoginLoading(true)
+    setLoginError('')
+
+    try {
+      const response = await axios.post(`${API_URL}/api/auth/login`, { email, password })
+      const nextSession = response.data
+      writeAuthSession(nextSession)
+      setSession(nextSession)
+      setPassword('')
+    } catch (err) {
+      setLoginError(getApiErrorMessage(err))
+    } finally {
+      setLoginLoading(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    const activeSession = session
+    clearAuthSession()
+    setSession(null)
+    setAppReviews([])
+    setAppResult(null)
+
+    if (activeSession?.token) {
+      try {
+        await axios.post(`${API_URL}/api/auth/logout`, {}, { headers: authHeaders(activeSession) })
+      } catch {
+        // Local logout already happened; remote revocation is best effort.
+      }
+    }
+  }
+
+  const handlePrivateAnalyze = async (event) => {
+    event.preventDefault()
+
+    if (!appText.trim() || !session) return
+
+    setAppSubmitting(true)
+    setAppError('')
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/api/review`,
+        {
+          text: appText.trim(),
+          channel: appChannel,
+          productArea: appProductArea,
+          customerRef: appCustomerRef,
+        },
+        { headers: authHeaders(session) },
+      )
+      const normalizedResult = normalizeReviewResponse(response.data)
+
+      setAppResult(normalizedResult)
+      setAppReviews((current) => [
+        normalizedResult,
+        ...current.filter((review) => review.id !== normalizedResult.id),
+      ].slice(0, 8))
+      await loadPrivateData(session)
+    } catch (err) {
+      setAppError(getApiErrorMessage(err))
+    } finally {
+      setAppSubmitting(false)
+    }
+  }
+
+  if (!session) {
+    return (
+      <main className="private-shell login-shell">
+        <section className="login-panel" aria-labelledby="login-title">
+          <a className="brand" href="/" aria-label="Volver a InsightPulse">
+            <span className="brand-mark" aria-hidden="true">IP</span>
+            <strong>InsightPulse</strong>
+          </a>
+
+          <div>
+            <p className="eyebrow">Workspace privado</p>
+            <h1 id="login-title">Ingresar al panel</h1>
+            <p>Accede con tu email y contrasena para operar feedback real dentro de tu workspace.</p>
+          </div>
+
+          <form className="login-form" onSubmit={handleLogin}>
+            <label>
+              Email
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="tu@email.com"
+                autoComplete="email"
+                required
+              />
+            </label>
+            <label>
+              Contrasena
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Tu contrasena"
+                autoComplete="current-password"
+                required
+              />
+            </label>
+
+            {loginError && <p className="error-message" role="alert">{loginError}</p>}
+
+            <button className="primary-button" type="submit" disabled={loginLoading}>
+              {loginLoading ? 'Ingresando...' : 'Ingresar'}
+            </button>
+          </form>
+
+          <a className="secondary-link" href="/">Volver a la landing</a>
+        </section>
+      </main>
+    )
+  }
+
+  const workspace = session.workspace
+  const usage = appInsights.totals?.total || 0
+  const monthlyLimit = workspace.monthlyAnalysisLimit || 0
+  const usagePercent = monthlyLimit ? clampPercent((usage / monthlyLimit) * 100) : 0
+
+  return (
+    <main className="private-shell">
+      <aside className="app-sidebar">
+        <a className="brand" href="/" aria-label="InsightPulse landing">
+          <span className="brand-mark" aria-hidden="true">IP</span>
+          <strong>InsightPulse</strong>
+        </a>
+        <nav aria-label="Panel privado">
+          <a href="#overview">Overview</a>
+          <a href="#manual-analysis">Analisis manual</a>
+          <a href="#history">Historial</a>
+        </nav>
+        <button type="button" onClick={handleLogout}>Salir</button>
+      </aside>
+
+      <section className="app-main">
+        <header className="app-header" id="overview">
+          <div>
+            <p className="eyebrow">Workspace privado</p>
+            <h1>{workspace.name}</h1>
+            <p>Plan {workspace.plan} activo. Este panel ya opera contra datos persistentes del workspace.</p>
+          </div>
+          <div className="workspace-badge">
+            <span>Analisis del mes</span>
+            <strong>{usage}/{monthlyLimit || '∞'}</strong>
+          </div>
+        </header>
+
+        {appError && <p className="error-message" role="alert">{appError}</p>}
+
+        <section className="app-metrics" aria-label="Metricas del workspace">
+          <article>
+            <span>Total</span>
+            <strong>{appInsights.totals?.total || 0}</strong>
+            <p>opiniones guardadas</p>
+          </article>
+          <article>
+            <span>Riesgo alto</span>
+            <strong>{appInsights.totals?.highChurnRisk || 0}</strong>
+            <p>senales a revisar</p>
+          </article>
+          <article>
+            <span>Impacto promedio</span>
+            <strong>{appInsights.totals?.avgImpactScore || 0}%</strong>
+            <p>prioridad estimada</p>
+          </article>
+          <article>
+            <span>Uso del plan</span>
+            <strong>{usagePercent}%</strong>
+            <p>del limite mensual</p>
+          </article>
+        </section>
+
+        <section className="app-grid">
+          <form className="private-card" id="manual-analysis" onSubmit={handlePrivateAnalyze}>
+            <div className="card-heading">
+              <p className="eyebrow">Analisis manual</p>
+              <h2>Cargar feedback real</h2>
+              <p>Esto persiste en D1 y queda asociado a tu workspace.</p>
+            </div>
+
+            <div className="context-grid">
+              <label>
+                Canal
+                <select value={appChannel} onChange={(event) => setAppChannel(event.target.value)}>
+                  {channelOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Area
+                <select value={appProductArea} onChange={(event) => setAppProductArea(event.target.value)}>
+                  {areaOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Cliente
+                <input
+                  type="text"
+                  value={appCustomerRef}
+                  onChange={(event) => setAppCustomerRef(event.target.value)}
+                  placeholder="cliente o segmento"
+                />
+              </label>
+            </div>
+
+            <label className="input-label" htmlFor="private-review">Feedback</label>
+            <textarea
+              id="private-review"
+              value={appText}
+              onChange={(event) => setAppText(event.target.value)}
+              maxLength={MAX_TEXT_LENGTH}
+              placeholder="Pega aqui una opinion real de cliente..."
+            />
+
+            <button className="primary-button" type="submit" disabled={appSubmitting || !appText.trim()}>
+              {appSubmitting ? 'Analizando...' : 'Guardar analisis'}
+            </button>
+          </form>
+
+          <aside className="private-card">
+            <div className="card-heading">
+              <p className="eyebrow">Ultimo resultado</p>
+              <h2>{appResult?.analysis?.label || 'Sin analisis reciente'}</h2>
+              <p>{appResult?.analysis?.summary || 'Carga feedback real para ver el resultado accionable.'}</p>
+            </div>
+
+            {appResult && (
+              <>
+                <div className="result-meta">
+                  <span>Riesgo {formatRisk(appResult.analysis.churn_risk)}</span>
+                  <span>Impacto {normalizeImpactScore(appResult.analysis.impact_score)}%</span>
+                  <span>{appResult.product_area || 'general'}</span>
+                </div>
+                <div className="action-box">
+                  <span>Proxima accion</span>
+                  <p>{appResult.analysis.recommended_action}</p>
+                </div>
+              </>
+            )}
+          </aside>
+        </section>
+
+        <section className="private-card" id="history">
+          <div className="card-heading horizontal">
+            <div>
+              <p className="eyebrow">Historial privado</p>
+              <h2>Feedback persistido</h2>
+            </div>
+            <button type="button" className="ghost-button" onClick={() => loadPrivateData(session)} disabled={appLoading}>
+              {appLoading ? 'Actualizando...' : 'Actualizar'}
+            </button>
+          </div>
+
+          <div className="private-history">
+            {appReviews.length === 0 && (
+              <article className="signal-card empty">
+                <span>Sin opiniones reales todavia</span>
+                <p>El primer analisis manual aparecera aca y quedara asociado a este workspace.</p>
+              </article>
+            )}
+
+            {appReviews.map((review) => (
+              <article className={`signal-card ${getSentimentData(review).className}`} key={review.id}>
+                <div className="signal-card-header">
+                  <div>
+                    <span>{review.analysis.label}</span>
+                    <strong>{review.product_area || 'general'}</strong>
+                  </div>
+                  <time dateTime={review.created_at}>{formatRelativeTime(review.created_at)}</time>
+                </div>
+                <p>{review.analysis.summary}</p>
+                <div className="signal-meta">
+                  <span>{review.channel || 'manual'}</span>
+                  <span>{review.customer_ref || 'sin cliente'}</span>
+                  <span>Riesgo {formatRisk(review.analysis.churn_risk)}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </section>
     </main>
   )
 }

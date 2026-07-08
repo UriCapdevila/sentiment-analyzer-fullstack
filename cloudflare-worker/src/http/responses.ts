@@ -1,4 +1,4 @@
-import { DependencyError, ValidationError } from '../domain/errors';
+import { AuthError, DependencyError, ValidationError } from '../domain/errors';
 
 type JsonResponseOptions = {
   headers: Headers;
@@ -30,6 +30,18 @@ export function notFoundResponse(headers: Headers, requestId: string): Response 
 }
 
 export function errorResponse(error: unknown, headers: Headers, requestId: string): Response {
+  if (error instanceof AuthError) {
+    return jsonResponse(
+      {
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      },
+      { headers, requestId, status: error.code === 'forbidden' ? 403 : 401 },
+    );
+  }
+
   if (error instanceof ValidationError) {
     return jsonResponse(
       {

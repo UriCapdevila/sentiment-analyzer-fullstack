@@ -1328,6 +1328,211 @@ pre {
   color: var(--ink-soft);
 }
 
+.private-shell {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.login-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(238, 244, 255, 0.92)),
+    repeating-linear-gradient(90deg, rgba(79, 70, 229, 0.04) 0 1px, transparent 1px 92px);
+}
+
+.login-panel {
+  display: grid;
+  gap: 28px;
+  width: min(480px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: clamp(24px, 5vw, 42px);
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.login-panel h1,
+.app-header h1,
+.card-heading h2 {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.login-panel h1 {
+  font-size: clamp(2.1rem, 6vw, 3.4rem);
+}
+
+.login-panel p:not(.eyebrow),
+.app-header p,
+.card-heading p,
+.workspace-badge span,
+.app-metrics p {
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.login-form {
+  display: grid;
+  gap: 14px;
+}
+
+.login-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  align-content: start;
+  gap: 28px;
+  min-height: 100vh;
+  border-right: 1px solid var(--line);
+  padding: 22px;
+  background: #ffffff;
+}
+
+.app-sidebar nav {
+  display: grid;
+  gap: 6px;
+}
+
+.app-sidebar nav a,
+.app-sidebar button {
+  border-radius: 8px;
+  padding: 11px 12px;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 900;
+  text-align: left;
+  text-decoration: none;
+}
+
+.app-sidebar nav a:hover,
+.app-sidebar nav a:focus-visible {
+  background: var(--surface-soft);
+  color: var(--accent-strong);
+}
+
+.app-sidebar button {
+  border: 1px solid var(--line);
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.app-main {
+  display: grid;
+  gap: 22px;
+  width: min(1220px, 100%);
+  padding: clamp(20px, 4vw, 42px);
+}
+
+.app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 22px;
+}
+
+.app-header h1 {
+  font-size: clamp(2.4rem, 5vw, 4.6rem);
+}
+
+.workspace-badge,
+.private-card,
+.app-metrics article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.workspace-badge {
+  min-width: 180px;
+  padding: 18px;
+}
+
+.workspace-badge strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--ink);
+  font-size: 1.7rem;
+}
+
+.app-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.app-metrics article {
+  padding: 18px;
+}
+
+.app-metrics span {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.app-metrics strong {
+  display: block;
+  margin-top: 10px;
+  color: var(--ink);
+  font-size: 2.2rem;
+  line-height: 0.95;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.7fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.private-card {
+  padding: clamp(18px, 3vw, 28px);
+}
+
+.card-heading {
+  margin-bottom: 18px;
+}
+
+.card-heading.horizontal {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.card-heading h2 {
+  font-size: clamp(1.7rem, 4vw, 2.8rem);
+}
+
+.private-card .primary-button {
+  margin-top: 18px;
+}
+
+.private-history {
+  display: grid;
+  gap: 12px;
+}
+
 button:focus-visible,
 a:focus-visible {
   outline: 3px solid rgba(79, 70, 229, 0.28);
@@ -1366,8 +1571,21 @@ a:focus-visible {
   .demo-grid,
   .signal-copy,
   .signal-grid,
+  .private-shell,
+  .app-grid,
   .developer-section {
     grid-template-columns: 1fr;
+  }
+
+  .app-sidebar {
+    position: relative;
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .app-metrics {
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .signal-summary {
@@ -1502,6 +1720,8 @@ a:focus-visible {
   .form-actions,
   .result-header,
   .signal-card-header,
+  .app-header,
+  .card-heading.horizontal,
   .site-footer {
     align-items: stretch;
     flex-direction: column;
@@ -1525,6 +1745,10 @@ a:focus-visible {
 
   .signal-impact strong {
     text-align: left;
+  }
+
+  .app-metrics {
+    grid-template-columns: 1fr;
   }
 }
 

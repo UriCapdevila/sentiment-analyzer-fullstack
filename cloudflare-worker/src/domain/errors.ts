@@ -17,3 +17,13 @@ export class DependencyError extends Error {
     this.name = 'DependencyError';
   }
 }
+
+export class AuthError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'AuthError';
+  }
+}
