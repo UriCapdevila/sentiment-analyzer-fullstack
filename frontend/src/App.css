@@ -435,6 +435,7 @@
 .developer-section,
 .reliability-section,
 .pricing-section,
+.faq-section,
 .final-cta,
 .site-footer {
   width: min(1180px, calc(100% - 40px));
@@ -453,8 +454,9 @@
 .site-view-shell > .developer-section,
 .site-view-shell > .reliability-section,
 .site-view-shell > .pricing-section,
+.site-view-shell > .faq-section,
 .site-view-shell > .final-cta {
-  min-height: min(760px, calc(100vh - 120px));
+  min-height: min(700px, calc(100vh - 120px));
 }
 
 .section-copy {
@@ -469,6 +471,7 @@
 .operating-copy h2,
 .developer-copy h2,
 .reliability-section h2,
+.faq-section h2,
 .final-cta h2 {
   margin: 0;
   color: var(--ink);
@@ -479,6 +482,7 @@
 .section-copy p:not(.eyebrow),
 .operating-copy p,
 .developer-copy p,
+.faq-section p,
 .final-cta p {
   max-width: 680px;
   margin: 16px 0 0;
@@ -523,7 +527,7 @@
 }
 
 .module-card {
-  min-height: 320px;
+  min-height: 240px;
   padding: 24px;
 }
 
@@ -556,22 +560,6 @@
 .use-case-card p {
   color: var(--ink-soft);
   line-height: 1.55;
-}
-
-.module-card div {
-  margin-top: 26px;
-}
-
-.module-card div strong {
-  display: block;
-  color: var(--accent-strong);
-  font-size: 3.1rem;
-  line-height: 0.95;
-}
-
-.module-card div small {
-  color: var(--ink-muted);
-  font-weight: 800;
 }
 
 .operating-section {
@@ -987,6 +975,11 @@ mark {
   padding: 92px 0;
 }
 
+.signal-section.compact {
+  min-height: auto;
+  padding: 34px 0 76px;
+}
+
 .signal-copy {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(320px, 0.55fr);
@@ -1272,6 +1265,38 @@ pre {
   margin: 8px 0 0;
   color: var(--ink-soft);
   line-height: 1.5;
+}
+
+.faq-section {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.7fr) minmax(0, 1.3fr);
+  gap: 34px;
+  align-items: start;
+  padding: 88px 0;
+}
+
+.faq-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.faq-grid article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+  box-shadow: 0 16px 40px rgba(17, 24, 39, 0.08);
+}
+
+.faq-grid strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.faq-grid p {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  line-height: 1.55;
 }
 
 .pricing-card {
@@ -1924,6 +1949,7 @@ a:focus-visible {
   .demo-grid,
   .signal-copy,
   .signal-grid,
+  .faq-section,
   .private-shell,
   .app-grid,
   .csv-layout,
@@ -1970,6 +1996,7 @@ a:focus-visible {
   .developer-section,
   .reliability-section,
   .pricing-section,
+  .faq-section,
   .final-cta,
   .site-footer {
     width: 100%;
@@ -2043,6 +2070,7 @@ a:focus-visible {
   .developer-section,
   .reliability-section,
   .pricing-section,
+  .faq-section,
   .site-footer {
     width: min(100% - 28px, 1180px);
   }

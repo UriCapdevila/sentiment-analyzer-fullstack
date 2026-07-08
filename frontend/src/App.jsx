@@ -82,27 +82,21 @@ const channelOptions = ['manual', 'support', 'survey', 'sales', 'app-store']
 const areaOptions = ['checkout', 'billing', 'onboarding', 'support', 'performance', 'general']
 const csvTextHeaderHints = ['feedback', 'review', 'opinion', 'comentario', 'resena', 'texto', 'text', 'message', 'mensaje']
 
-const platformModules = [
+const problemSolutionCards = [
   {
-    label: 'Ingest',
-    title: 'Centraliza feedback de cualquier canal',
-    copy: 'Tickets, encuestas, llamadas de ventas, reviews publicas y notas internas entran al mismo lenguaje operativo.',
-    metric: '7+',
-    unit: 'canales mock',
+    label: 'Antes',
+    title: 'Feedback repartido, decisiones lentas.',
+    copy: 'Tickets, encuestas y notas quedan en lugares distintos. El equipo llega tarde a los patrones importantes.',
   },
   {
-    label: 'Classify',
-    title: 'LLM con criterio de negocio',
-    copy: 'No solo etiqueta positivo o negativo: mide severidad, riesgo de churn, impacto y proxima accion.',
-    metric: '92%',
-    unit: 'confianza demo',
+    label: 'Despues',
+    title: 'Un panel que prioriza por impacto.',
+    copy: 'Cada opinion se convierte en riesgo, tema, severidad y accion recomendada para decidir rapido.',
   },
   {
-    label: 'Route',
-    title: 'Prioridades para cada equipo',
-    copy: 'Producto ve bugs y fricciones, soporte ve urgencias, revenue ve riesgo comercial antes de que escale.',
-    metric: '18',
-    unit: 'riesgos altos',
+    label: 'Resultado',
+    title: 'Menos lectura manual, mas foco.',
+    copy: 'Producto, soporte y revenue ven la misma senal de negocio sin depender de planillas.',
   },
 ]
 
@@ -148,11 +142,11 @@ const pricingPlans = [
 
 const landingViews = [
   { id: 'overview', hash: '#top', label: 'Overview' },
-  { id: 'platform', hash: '#platform', label: 'Producto' },
+  { id: 'platform', hash: '#platform', label: 'Problema' },
   { id: 'solutions', hash: '#use-cases', label: 'Soluciones' },
   { id: 'demo', hash: '#demo', label: 'Demo' },
-  { id: 'developers', hash: '#developers', label: 'Developers' },
   { id: 'pricing', hash: '#pricing', label: 'Pricing' },
+  { id: 'faq', hash: '#faq', label: 'FAQ' },
 ]
 
 const appViews = [
@@ -758,10 +752,10 @@ function LandingApp() {
         </div>
 
         <div className="hero-content">
-          <p className="eyebrow">Customer intelligence infrastructure</p>
-          <h1>La IA que convierte feedback en decisiones.</h1>
+          <p className="eyebrow">SaaS de inteligencia de feedback</p>
+          <h1>Detecta clientes en riesgo antes de perderlos.</h1>
           <p>
-            InsightPulse convierte feedback disperso en senales de negocio: riesgo, temas recurrentes, prioridad e instrucciones claras para actuar.
+            InsightPulse analiza opiniones, tickets y CSV para priorizar problemas reales por impacto, severidad y riesgo de churn.
           </p>
 
           <div className="hero-actions">
@@ -773,7 +767,7 @@ function LandingApp() {
                 navigateLanding(landingViews.find((view) => view.id === 'demo'))
               }}
             >
-              Probar el analizador
+              Probar demo
             </a>
             <a
               className="secondary-link"
@@ -783,26 +777,25 @@ function LandingApp() {
                 navigateLanding(landingViews.find((view) => view.id === 'platform'))
               }}
             >
-              Explorar plataforma
+              Ver problema
             </a>
           </div>
 
-          <div className="hero-trust" aria-label="Capacidades actuales">
-            <span>Cloudflare Worker</span>
-            <span>AI Gateway</span>
-            <span>D1 analytics</span>
-            <span>Gemini LLM</span>
+          <div className="hero-trust" aria-label="Prueba rapida de valor">
+            <span>CSV en minutos</span>
+            <span>Riesgo de churn</span>
+            <span>Resumen ejecutivo</span>
+            <span>Historial privado</span>
           </div>
         </div>
       </section>
 
-      <section className="logo-strip" aria-label="Integraciones mock">
-        <span>Support desk</span>
-        <span>CRM</span>
-        <span>Surveys</span>
-        <span>App reviews</span>
-        <span>Sales notes</span>
-        <span>Slack alerts</span>
+      <section className="logo-strip" aria-label="Prueba social">
+        <span>Para equipos de producto</span>
+        <span>Soporte</span>
+        <span>Revenue</span>
+        <span>Founders</span>
+        <span>Customer Success</span>
       </section>
       </>
       )}
@@ -810,23 +803,17 @@ function LandingApp() {
       {activeLandingView === 'platform' && (
       <section className="platform-section" id="platform">
         <div className="section-copy">
-          <p className="eyebrow">Plataforma</p>
-          <h2>Todo el feedback entra, se clasifica y vuelve como decision.</h2>
-          <p>
-            La experiencia esta pensada para operar feedback a escala, no para leer comentarios uno por uno. Cada modulo se puede activar de forma independiente a medida que el SaaS crece.
-          </p>
+          <p className="eyebrow">Problema vs solucion</p>
+          <h2>El feedback no sirve si llega tarde a la decision.</h2>
+          <p>InsightPulse reduce ruido operativo y muestra que requiere atencion ahora.</p>
         </div>
 
         <div className="module-grid">
-          {platformModules.map((module) => (
+          {problemSolutionCards.map((module) => (
             <article className="module-card" key={module.label}>
               <span>{module.label}</span>
               <h3>{module.title}</h3>
               <p>{module.copy}</p>
-              <div>
-                <strong>{module.metric}</strong>
-                <small>{module.unit}</small>
-              </div>
             </article>
           ))}
         </div>
@@ -864,11 +851,9 @@ function LandingApp() {
         </div>
 
         <div className="operating-copy">
-          <p className="eyebrow">Command center</p>
-          <h2>Una vista ejecutiva para decidir donde poner energia.</h2>
-          <p>
-            InsightPulse ordena lo que normalmente queda repartido entre planillas, tickets y conversaciones internas.
-          </p>
+          <p className="eyebrow">Soluciones</p>
+          <h2>Una lectura clara para cada equipo.</h2>
+          <p>El mismo feedback, traducido al lenguaje de producto, soporte y revenue.</p>
           <dl className="stat-list">
             <div>
               <dt>{insights.totals.highSeverity}</dt>
@@ -889,7 +874,7 @@ function LandingApp() {
       <section className="use-case-section" id="use-cases">
         <div className="section-copy narrow">
           <p className="eyebrow">Soluciones</p>
-          <h2>Una misma inteligencia para producto, soporte y revenue.</h2>
+          <h2>Prioridades accionables, no reportes largos.</h2>
         </div>
 
         <div className="use-case-grid">
@@ -913,11 +898,9 @@ function LandingApp() {
       <>
       <section className="demo-section" id="demo">
         <div className="section-copy">
-          <p className="eyebrow">Demo funcional</p>
-          <h2>Proba el motor de analisis con contexto comercial.</h2>
-          <p>
-            Esta demo consulta la API cloud, pero no guarda resultados en la base real. El historial queda temporalmente en este navegador.
-          </p>
+          <p className="eyebrow">Demostracion visual</p>
+          <h2>Prueba una opinion y mira la decision sugerida.</h2>
+          <p>La demo es temporal; el producto privado guarda historial real.</p>
         </div>
 
         <div className="demo-grid">
@@ -1039,13 +1022,12 @@ function LandingApp() {
         </div>
       </section>
 
-      <section className="signal-section" id="signals">
+      {recentReviews.length > 0 && (
+      <section className="signal-section compact" id="signals">
         <div className="signal-copy">
-          <p className="eyebrow">Demo cache</p>
-          <h2>La demo tiene memoria temporal, el producto real guarda datos reales.</h2>
-          <p>
-            Las pruebas publicas viven solo en cache de sesion y se eliminan automaticamente. La base D1 queda reservada para clientes reales y uso autenticado.
-          </p>
+          <p className="eyebrow">Historial demo</p>
+          <h2>Resultados temporales de esta sesion.</h2>
+          <p>Sirve para comparar pruebas sin mezclar datos reales.</p>
         </div>
 
         <div className="signal-grid">
@@ -1117,80 +1099,7 @@ function LandingApp() {
           </div>
         </div>
       </section>
-      </>
       )}
-
-      {activeLandingView === 'developers' && (
-      <>
-      <section className="developer-section" id="developers">
-        <div className="developer-copy">
-          <p className="eyebrow">Developers</p>
-          <h2>API simple hoy, arquitectura lista para crecer.</h2>
-          <p>
-            La demo publica usa un endpoint no persistente. La API de producto mantiene el endpoint persistente para clientes reales, autenticacion, multi-tenant y webhooks.
-          </p>
-        </div>
-
-        <div className="code-window" aria-label="Ejemplo de API">
-          <div className="mock-topbar">
-            <span></span>
-            <span></span>
-            <span></span>
-            <strong>review.create</strong>
-          </div>
-          <pre>{`POST /api/demo/review
-// Demo publica: analiza sin guardar en D1.
-{
-  "text": "Checkout falla y soporte demora",
-  "channel": "support",
-  "productArea": "checkout"
-}
-
-POST /api/review
-// Producto real: analiza y persiste para clientes.
-{
-  "text": "Checkout falla y soporte demora",
-  "channel": "support",
-  "productArea": "checkout"
-}
-
-=> {
-  "label": "Mixto",
-  "severity": "high",
-  "churn_risk": "high",
-  "recommended_action": "Priorizar..."
-}`}</pre>
-        </div>
-      </section>
-
-      <section className="reliability-section">
-        <div>
-          <p className="eyebrow">Infraestructura</p>
-          <h2>Construido para operar como servicio, no como experimento aislado.</h2>
-        </div>
-        <div className="reliability-grid">
-          <article>
-            <span>01</span>
-            <strong>Edge API</strong>
-            <p>Worker desplegable desde GitHub con build automatico.</p>
-          </article>
-          <article>
-            <span>02</span>
-            <strong>Provider control</strong>
-            <p>AI Gateway permite observar, proteger y cambiar proveedor LLM.</p>
-          </article>
-          <article>
-            <span>03</span>
-            <strong>Data foundation</strong>
-            <p>D1 guarda resultados para historial, tendencias y dashboards.</p>
-          </article>
-          <article>
-            <span>04</span>
-            <strong>Product expansion</strong>
-            <p>Preparado para auth, billing, workspaces e integraciones.</p>
-          </article>
-        </div>
-      </section>
       </>
       )}
 
@@ -1198,8 +1107,8 @@ POST /api/review
       <>
       <section className="pricing-section" id="pricing">
         <div className="section-copy narrow">
-          <p className="eyebrow">Pricing mock</p>
-          <h2>Planes pensados para validar, vender y escalar.</h2>
+          <p className="eyebrow">Precios</p>
+          <h2>Empieza chico. Escala cuando el feedback lo justifique.</h2>
         </div>
 
         <div className="pricing-grid">
@@ -1229,8 +1138,8 @@ POST /api/review
 
       <section className="final-cta">
         <p className="eyebrow">InsightPulse</p>
-        <h2>El siguiente paso es convertir esta demo en un sistema de decision.</h2>
-        <p>Tenemos clasificacion, nube y una narrativa SaaS. Ahora podemos avanzar hacia usuarios, workspaces, integraciones y monetizacion.</p>
+        <h2>Convierte opiniones en prioridades esta semana.</h2>
+        <p>Prueba el analizador y valida si tus clientes estan avisando algo importante.</p>
         <a
           className="primary-link"
           href="#demo"
@@ -1243,6 +1152,34 @@ POST /api/review
         </a>
       </section>
       </>
+      )}
+
+      {activeLandingView === 'faq' && (
+      <section className="faq-section" id="faq">
+        <div className="section-copy narrow">
+          <p className="eyebrow">FAQ</p>
+          <h2>Preguntas antes de probar.</h2>
+        </div>
+
+        <div className="faq-grid">
+          <article>
+            <strong>¿Puedo subir CSV?</strong>
+            <p>Si. El panel privado ya permite cargar CSV, elegir columna y procesar lotes controlados.</p>
+          </article>
+          <article>
+            <strong>¿La demo guarda mis datos?</strong>
+            <p>No. La demo usa cache temporal del navegador. El historial real vive solo en cuentas autenticadas.</p>
+          </article>
+          <article>
+            <strong>¿Que pasa con los limites de IA?</strong>
+            <p>El dashboard mide intentos, errores 429, tokens y latencia para cuidar consumo y costos.</p>
+          </article>
+          <article>
+            <strong>¿Se puede cancelar?</strong>
+            <p>La idea del plan inicial es simple: suscripcion mensual, sin contratos largos ni setup complejo.</p>
+          </article>
+        </div>
+      </section>
       )}
       </div>
 
