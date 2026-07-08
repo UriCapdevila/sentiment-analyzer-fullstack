@@ -1,4 +1,4 @@
-import { AuthError, DependencyError, ValidationError } from '../domain/errors';
+import { AuthError, DependencyError, NotFoundError, ValidationError } from '../domain/errors';
 
 type JsonResponseOptions = {
   headers: Headers;
@@ -51,6 +51,18 @@ export function errorResponse(error: unknown, headers: Headers, requestId: strin
         },
       },
       { headers, requestId, status: 422 },
+    );
+  }
+
+  if (error instanceof NotFoundError) {
+    return jsonResponse(
+      {
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      },
+      { headers, requestId, status: 404 },
     );
   }
 

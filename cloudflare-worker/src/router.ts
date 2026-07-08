@@ -1,4 +1,4 @@
-import { analyzeAndStoreReview, analyzeDemoReview, getInsights, getUsageMetrics, listReviews } from './services/feedback-service';
+import { analyzeAndStoreReview, analyzeDemoReview, deleteReview, getInsights, getUsageMetrics, listReviews } from './services/feedback-service';
 import { authenticateSession, loginWithPassword, logoutSession, serializeWorkspace } from './services/auth-service';
 import { createCorsHeaders, handleOptions } from './http/cors';
 import { errorResponse, jsonResponse, notFoundResponse } from './http/responses';
@@ -58,6 +58,13 @@ export async function handleRequest(request: Request, env: Env, ctx: ExecutionCo
     if (request.method === 'GET' && url.pathname === '/api/reviews') {
       const workspace = await authenticateSession(request, env);
       const result = await listReviews(url.searchParams, env, workspace);
+      return jsonResponse(result, { headers: corsHeaders, requestId });
+    }
+
+    if (request.method === 'DELETE' && url.pathname.startsWith('/api/reviews/')) {
+      const workspace = await authenticateSession(request, env);
+      const reviewId = decodeURIComponent(url.pathname.replace('/api/reviews/', '').trim());
+      const result = await deleteReview(reviewId, env, workspace);
       return jsonResponse(result, { headers: corsHeaders, requestId });
     }
 

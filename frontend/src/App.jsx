@@ -1211,6 +1211,8 @@ function PrivateApp() {
   const [appCustomerRef, setAppCustomerRef] = useState('')
   const [appResult, setAppResult] = useState(null)
   const [appSubmitting, setAppSubmitting] = useState(false)
+  const [deleteCandidate, setDeleteCandidate] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [csvFileName, setCsvFileName] = useState('')
   const [csvHeaders, setCsvHeaders] = useState([])
   const [csvRows, setCsvRows] = useState([])
@@ -1300,6 +1302,7 @@ function PrivateApp() {
     setAppReviews([])
     setAppResult(null)
     setAppUsage(DEFAULT_USAGE)
+    setDeleteCandidate(null)
 
     if (activeSession?.token) {
       try {
@@ -1474,6 +1477,28 @@ function PrivateApp() {
       .join('\n')
 
     downloadTextFile('insightpulse-resultados.csv', content, 'text/csv;charset=utf-8')
+  }
+
+  const handleConfirmDeleteReview = async () => {
+    if (!session || !deleteCandidate?.id) return
+
+    setDeleteLoading(true)
+    setAppError('')
+
+    try {
+      await axios.delete(`${API_URL}/api/reviews/${encodeURIComponent(deleteCandidate.id)}`, {
+        headers: authHeaders(session),
+      })
+
+      setAppReviews((current) => current.filter((review) => review.id !== deleteCandidate.id))
+      setAppResult((current) => (current?.id === deleteCandidate.id ? null : current))
+      setDeleteCandidate(null)
+      await loadPrivateData(session)
+    } catch (err) {
+      setAppError(getApiErrorMessage(err))
+    } finally {
+      setDeleteLoading(false)
+    }
   }
 
   const navigateApp = (view) => {
@@ -1945,6 +1970,11 @@ function PrivateApp() {
                   <span>{review.customer_ref || 'sin cliente'}</span>
                   <span>Riesgo {formatRisk(review.analysis.churn_risk)}</span>
                 </div>
+                <div className="history-actions">
+                  <button type="button" onClick={() => setDeleteCandidate(review)}>
+                    Eliminar
+                  </button>
+                </div>
               </article>
             ))}
           </div>
@@ -1952,6 +1982,34 @@ function PrivateApp() {
         )}
         </div>
       </section>
+
+      {deleteCandidate && (
+        <div className="modal-backdrop" role="presentation">
+          <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-review-title">
+            <div>
+              <p className="eyebrow">Accion irreversible</p>
+              <h2 id="delete-review-title">Eliminar feedback del historial</h2>
+              <p>
+                Esta accion no se puede deshacer. Se eliminara el feedback guardado y sus temas asociados; las metricas de uso quedaran solo como auditoria sin texto vinculado.
+              </p>
+            </div>
+
+            <article className="delete-preview">
+              <span>{deleteCandidate.analysis?.label || 'Feedback'}</span>
+              <p>{deleteCandidate.analysis?.summary || deleteCandidate.original_text}</p>
+            </article>
+
+            <div className="confirm-actions">
+              <button type="button" className="ghost-button" onClick={() => setDeleteCandidate(null)} disabled={deleteLoading}>
+                Cancelar
+              </button>
+              <button type="button" className="danger-button" onClick={handleConfirmDeleteReview} disabled={deleteLoading}>
+                {deleteLoading ? 'Eliminando...' : 'Eliminar definitivamente'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   )
 }

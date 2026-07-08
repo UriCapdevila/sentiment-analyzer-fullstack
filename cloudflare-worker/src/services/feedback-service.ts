@@ -2,13 +2,14 @@ import { validateReviewInput } from '../domain/validation';
 import { analyzeWithGemini } from '../infrastructure/gemini';
 import {
   countReviewsSince,
+  deleteReviewById,
   insertReview,
   selectInsights,
   selectReviews,
   toReviewResponse,
 } from '../repositories/feedback-repository';
 import { WorkspaceSession } from '../domain/types';
-import { DependencyError, ValidationError } from '../domain/errors';
+import { DependencyError, NotFoundError, ValidationError } from '../domain/errors';
 import { insertUsageEvent, selectUsageSummary } from '../repositories/usage-repository';
 
 const DEFAULT_LIMIT = 25;
@@ -180,6 +181,27 @@ export async function listReviews(
       offset,
       nextOffset: reviews.length === limit ? offset + limit : null,
     },
+  };
+}
+
+export async function deleteReview(
+  reviewId: string,
+  env: Env,
+  workspace: WorkspaceSession,
+): Promise<unknown> {
+  if (!reviewId || reviewId.length > 120) {
+    throw new NotFoundError('review_not_found', 'No encontramos ese feedback en el workspace.');
+  }
+
+  const deleted = await deleteReviewById(env.DB, workspace.workspaceId, reviewId);
+
+  if (!deleted) {
+    throw new NotFoundError('review_not_found', 'No encontramos ese feedback en el workspace.');
+  }
+
+  return {
+    deleted: true,
+    id: reviewId,
   };
 }
 

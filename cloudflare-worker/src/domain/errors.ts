@@ -29,3 +29,13 @@ export class AuthError extends Error {
     this.name = 'AuthError';
   }
 }
+
+export class NotFoundError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'NotFoundError';
+  }
+}

@@ -812,7 +812,8 @@ textarea:focus {
 }
 
 .primary-button,
-.ghost-button {
+.ghost-button,
+.danger-button {
   cursor: pointer;
 }
 
@@ -1911,6 +1912,93 @@ pre {
   gap: 12px;
 }
 
+.history-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.history-actions button,
+.danger-button {
+  border: 1px solid #f0b7ad;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff2ef;
+  color: #9f2f22;
+  font: inherit;
+  font-weight: 900;
+}
+
+.history-actions button:hover,
+.history-actions button:focus-visible,
+.danger-button:hover:not(:disabled),
+.danger-button:focus-visible {
+  border-color: #d94a3a;
+  background: #ffe4df;
+}
+
+.danger-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 17, 31, 0.54);
+  backdrop-filter: blur(6px);
+}
+
+.confirm-dialog {
+  display: grid;
+  gap: 18px;
+  width: min(560px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: clamp(20px, 4vw, 30px);
+  background: #ffffff;
+  box-shadow: var(--shadow-strong);
+}
+
+.confirm-dialog h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
+  line-height: 1;
+}
+
+.confirm-dialog p:not(.eyebrow),
+.delete-preview p {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.delete-preview {
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--coral);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface-soft);
+}
+
+.delete-preview span {
+  color: var(--coral);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 button:focus-visible,
 a:focus-visible {
   outline: 3px solid rgba(79, 70, 229, 0.28);
@@ -2107,6 +2195,7 @@ a:focus-visible {
 
   .input-meta,
   .form-actions,
+  .confirm-actions,
   .result-header,
   .signal-card-header,
   .app-header,

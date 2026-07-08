@@ -118,6 +118,35 @@ export async function selectReviews(db: D1Database, options: ListReviewsOptions)
   return result.results || [];
 }
 
+export async function deleteReviewById(db: D1Database, workspaceId: string, reviewId: string): Promise<boolean> {
+  const existingReview = await db
+    .prepare(
+      `SELECT id
+       FROM feedback_reviews
+       WHERE id = ? AND workspace_id = ?`,
+    )
+    .bind(reviewId, workspaceId)
+    .first<{ id: string }>();
+
+  if (!existingReview) {
+    return false;
+  }
+
+  await db.batch([
+    db
+      .prepare('UPDATE usage_events SET review_id = NULL WHERE review_id = ?')
+      .bind(reviewId),
+    db
+      .prepare('DELETE FROM feedback_topics WHERE review_id = ?')
+      .bind(reviewId),
+    db
+      .prepare('DELETE FROM feedback_reviews WHERE id = ? AND workspace_id = ?')
+      .bind(reviewId, workspaceId),
+  ]);
+
+  return true;
+}
+
 export async function countReviewsSince(db: D1Database, workspaceId: string, sinceIso: string): Promise<number> {
   const result = await db
     .prepare(
