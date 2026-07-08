@@ -1,0 +1,11 @@
+cliente,canal,area,feedback
+cliente-alpha,support,checkout,"El producto me resulta muy simple de usar, pero el pago falla casi todos los viernes y eso nos hace perder ventas."
+cliente-beta,survey,onboarding,"La experiencia inicial fue excelente. En menos de una hora entendimos como cargar comentarios y ver prioridades."
+cliente-gamma,support,billing,"Me cobraron dos veces el mismo mes, soporte tardo tres dias en responder y estoy evaluando cancelar el servicio."
+cliente-delta,sales,general,"La herramienta parece interesante, aunque todavia no entiendo si nos ayudaria a priorizar feedback o solo a clasificarlo."
+cliente-epsilon,app-store,performance,"Desde la ultima actualizacion la app carga lento, se congela al abrir reportes y el equipo dejo de usarla."
+cliente-zeta,survey,support,"El soporte fue rapido y claro. Me explicaron el problema y lo resolvieron en la misma llamada."
+cliente-eta,sales,billing,"El precio es razonable, pero necesitamos reportes exportables y limites mas claros antes de contratar."
+cliente-theta,support,checkout,"El checkout vuelve a funcionar bien. Nos gustaria recibir una alerta automatica si el error aparece otra vez."
+cliente-iota,survey,onboarding,"No tuve problemas importantes, solo me gustaria que el panel tuviera mas ejemplos para empezar."
+cliente-kappa,support,general,"Estamos muy frustrados. Ya reportamos el mismo bug cuatro veces y nadie nos confirma una fecha de solucion."

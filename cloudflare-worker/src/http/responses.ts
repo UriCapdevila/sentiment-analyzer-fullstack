@@ -56,6 +56,8 @@ export function errorResponse(error: unknown, headers: Headers, requestId: strin
 
   if (error instanceof DependencyError) {
     console.error(JSON.stringify({ level: 'error', requestId, code: error.code, message: error.message }));
+    const status = error.statusCode === 429 ? 429 : 502;
+
     return jsonResponse(
       {
         error: {
@@ -63,7 +65,7 @@ export function errorResponse(error: unknown, headers: Headers, requestId: strin
           message: error.message,
         },
       },
-      { headers, requestId, status: 502 },
+      { headers, requestId, status },
     );
   }
 

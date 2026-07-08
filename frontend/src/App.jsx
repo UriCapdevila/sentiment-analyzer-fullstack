@@ -33,6 +33,24 @@ const DEFAULT_INSIGHTS = {
   recent: [],
 }
 
+const DEFAULT_USAGE = {
+  totals: {
+    total: 0,
+    successful: 0,
+    failed: 0,
+    rateLimited: 0,
+    successRate: 0,
+    avgLatencyMs: 0,
+    totalTokens: 0,
+    promptTokens: 0,
+    completionTokens: 0,
+  },
+  byRoute: [],
+  byStatus: [],
+  byProviderStatus: [],
+  recentErrors: [],
+}
+
 const sentimentCopy = {
   Positivo: {
     tone: 'Advocacy signal',
@@ -162,6 +180,10 @@ function formatRisk(value) {
   }
 
   return copy[value] || 'Sin dato'
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat('es-AR').format(Number(value || 0))
 }
 
 function formatRelativeTime(value) {
@@ -1129,6 +1151,7 @@ function PrivateApp() {
   const [appLoading, setAppLoading] = useState(Boolean(session))
   const [appError, setAppError] = useState('')
   const [appInsights, setAppInsights] = useState(DEFAULT_INSIGHTS)
+  const [appUsage, setAppUsage] = useState(DEFAULT_USAGE)
   const [appReviews, setAppReviews] = useState([])
   const [appText, setAppText] = useState('')
   const [appChannel, setAppChannel] = useState('manual')
@@ -1168,12 +1191,14 @@ function PrivateApp() {
     setAppError('')
 
     try {
-      const [insightsResponse, reviewsResponse] = await Promise.all([
+      const [insightsResponse, reviewsResponse, usageResponse] = await Promise.all([
         axios.get(`${API_URL}/api/insights?days=30`, { headers: authHeaders(activeSession) }),
         axios.get(`${API_URL}/api/reviews?limit=8`, { headers: authHeaders(activeSession) }),
+        axios.get(`${API_URL}/api/usage?days=7`, { headers: authHeaders(activeSession) }),
       ])
 
       setAppInsights(insightsResponse.data)
+      setAppUsage(usageResponse.data || DEFAULT_USAGE)
       setAppReviews(Array.isArray(reviewsResponse.data?.data)
         ? reviewsResponse.data.data.map(normalizeReviewResponse)
         : [])
@@ -1213,6 +1238,7 @@ function PrivateApp() {
     setSession(null)
     setAppReviews([])
     setAppResult(null)
+    setAppUsage(DEFAULT_USAGE)
 
     if (activeSession?.token) {
       try {
@@ -1445,6 +1471,8 @@ function PrivateApp() {
   const usage = appInsights.totals?.total || 0
   const monthlyLimit = workspace.monthlyAnalysisLimit || 0
   const usagePercent = monthlyLimit ? clampPercent((usage / monthlyLimit) * 100) : 0
+  const usageTotals = appUsage.totals || DEFAULT_USAGE.totals
+  const provider429 = appUsage.byProviderStatus?.find((item) => item.label === '429')?.total || usageTotals.rateLimited || 0
 
   return (
     <main className="private-shell">
@@ -1455,6 +1483,7 @@ function PrivateApp() {
         </a>
         <nav aria-label="Panel privado">
           <a href="#overview">Overview</a>
+          <a href="#usage-health">Uso</a>
           <a href="#csv-import">CSV</a>
           <a href="#manual-analysis">Analisis manual</a>
           <a href="#history">Historial</a>
@@ -1498,6 +1527,76 @@ function PrivateApp() {
             <strong>{usagePercent}%</strong>
             <p>del limite mensual</p>
           </article>
+        </section>
+
+        <section className="private-card usage-card" id="usage-health">
+          <div className="card-heading horizontal">
+            <div>
+              <p className="eyebrow">Uso y salud</p>
+              <h2>Consumo operativo</h2>
+              <p>Monitoreo de intentos reales de LLM en los ultimos 7 dias para cuidar cuota, costos y estabilidad.</p>
+            </div>
+            <button type="button" className="ghost-button" onClick={() => loadPrivateData(session)} disabled={appLoading}>
+              {appLoading ? 'Actualizando...' : 'Actualizar'}
+            </button>
+          </div>
+
+          <div className="usage-grid" aria-label="Metricas de uso del LLM">
+            <article>
+              <span>Intentos</span>
+              <strong>{formatNumber(usageTotals.total)}</strong>
+              <p>{formatNumber(usageTotals.successful)} exitosos</p>
+            </article>
+            <article>
+              <span>Fallos</span>
+              <strong>{formatNumber(usageTotals.failed)}</strong>
+              <p>{formatNumber(provider429)} por limite 429</p>
+            </article>
+            <article>
+              <span>Exito</span>
+              <strong>{usageTotals.successRate || 0}%</strong>
+              <p>en ventana monitoreada</p>
+            </article>
+            <article>
+              <span>Latencia media</span>
+              <strong>{formatNumber(usageTotals.avgLatencyMs)} ms</strong>
+              <p>respuesta del proveedor</p>
+            </article>
+            <article>
+              <span>Tokens</span>
+              <strong>{formatNumber(usageTotals.totalTokens)}</strong>
+              <p>{formatNumber(usageTotals.promptTokens)} input / {formatNumber(usageTotals.completionTokens)} output</p>
+            </article>
+          </div>
+
+          <div className="usage-detail-grid">
+            <div>
+              <h3>Por flujo</h3>
+              <div className="usage-list">
+                {appUsage.byRoute?.length === 0 && <span>Sin eventos todavia</span>}
+                {appUsage.byRoute?.map((item) => (
+                  <div className="usage-row" key={item.label}>
+                    <span>{item.label === 'private_review' ? 'Producto' : 'Demo'}</span>
+                    <strong>{formatNumber(item.total)}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3>Errores recientes</h3>
+              <div className="usage-list">
+                {appUsage.recentErrors?.length === 0 && <span>Sin errores recientes</span>}
+                {appUsage.recentErrors?.map((error) => (
+                  <div className="usage-error" key={error.id}>
+                    <strong>{error.errorCode || `HTTP ${error.providerStatus || '-'}`}</strong>
+                    <span>{formatRelativeTime(error.createdAt)}</span>
+                    <p>{error.errorMessage || 'Error sin detalle.'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="private-card csv-card" id="csv-import">

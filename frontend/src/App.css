@@ -1528,6 +1528,95 @@ pre {
   margin-top: 18px;
 }
 
+.usage-card {
+  background:
+    linear-gradient(135deg, rgba(8, 17, 31, 0.04), rgba(255, 255, 255, 0.96) 40%),
+    #ffffff;
+}
+
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.usage-grid article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.usage-grid span,
+.usage-row span,
+.usage-error span {
+  color: var(--ink-muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.usage-grid strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--ink);
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.usage-grid p,
+.usage-error p {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.usage-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.2fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.usage-detail-grid h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.usage-list {
+  display: grid;
+  gap: 9px;
+}
+
+.usage-list > span {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--ink-muted);
+}
+
+.usage-row,
+.usage-error {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.usage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.usage-row strong,
+.usage-error strong {
+  color: var(--ink);
+}
+
 .csv-card {
   overflow: hidden;
   background:
@@ -1771,6 +1860,8 @@ a:focus-visible {
   .app-grid,
   .csv-layout,
   .csv-result-grid,
+  .usage-grid,
+  .usage-detail-grid,
   .developer-section {
     grid-template-columns: 1fr;
   }

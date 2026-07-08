@@ -1,10 +1,11 @@
 import { DependencyError } from '../domain/errors';
-import { SentimentAnalysis } from '../domain/types';
+import { LlmUsage, SentimentAnalysis } from '../domain/types';
 
 type GeminiResult = {
   analysis: SentimentAnalysis;
   model: string;
   latencyMs: number;
+  usage: LlmUsage;
 };
 
 const SYSTEM_INSTRUCTION = [
@@ -27,19 +28,30 @@ export async function analyzeWithGemini(text: string, env: Env, requestId: strin
     body: JSON.stringify(buildGeminiPayload(text)),
     signal: AbortSignal.timeout(timeoutMs),
   }).catch((error: unknown) => {
-    throw new DependencyError('llm_request_failed', error instanceof Error ? error.message : 'Gemini no respondio.');
+    throw new DependencyError(
+      'llm_request_failed',
+      error instanceof Error ? error.message : 'Gemini no respondio.',
+      undefined,
+      { latencyMs: Date.now() - startedAt, model },
+    );
   });
 
   const latencyMs = Date.now() - startedAt;
 
   if (!response.ok) {
     const body = await response.text();
-    throw new DependencyError('llm_bad_response', `Gemini devolvio HTTP ${response.status}: ${body.slice(0, 240)}`);
+    throw new DependencyError(
+      response.status === 429 ? 'llm_rate_limited' : 'llm_bad_response',
+      `Gemini devolvio HTTP ${response.status}: ${body.slice(0, 240)}`,
+      response.status,
+      { latencyMs, model },
+    );
   }
 
   const responseData = await response.json();
   const outputText = extractGeminiText(responseData);
   const analysis = normalizeAnalysis(JSON.parse(outputText));
+  const usage = extractUsage(responseData);
 
   console.log(
     JSON.stringify({
@@ -57,6 +69,7 @@ export async function analyzeWithGemini(text: string, env: Env, requestId: strin
     analysis,
     model,
     latencyMs,
+    usage,
   };
 }
 
@@ -156,6 +169,22 @@ function extractGeminiText(responseData: unknown): string {
   return text;
 }
 
+function extractUsage(responseData: unknown): LlmUsage {
+  const usage = (responseData as {
+    usageMetadata?: {
+      promptTokenCount?: number;
+      candidatesTokenCount?: number;
+      totalTokenCount?: number;
+    };
+  }).usageMetadata;
+
+  return {
+    promptTokens: toNullableInteger(usage?.promptTokenCount),
+    completionTokens: toNullableInteger(usage?.candidatesTokenCount),
+    totalTokens: toNullableInteger(usage?.totalTokenCount),
+  };
+}
+
 function normalizeAnalysis(value: unknown): SentimentAnalysis {
   const analysis = value as Record<string, unknown>;
 
@@ -194,6 +223,16 @@ function clampNumber(value: unknown, min: number, max: number): number {
   }
 
   return Math.min(max, Math.max(min, numeric));
+}
+
+function toNullableInteger(value: unknown): number | null {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return null;
+  }
+
+  return Math.max(0, Math.round(numeric));
 }
 
 function normalizeList(value: unknown, limit: number): string[] {

@@ -1,4 +1,4 @@
-import { analyzeAndStoreReview, analyzeDemoReview, getInsights, listReviews } from './services/feedback-service';
+import { analyzeAndStoreReview, analyzeDemoReview, getInsights, getUsageMetrics, listReviews } from './services/feedback-service';
 import { authenticateSession, loginWithPassword, logoutSession, serializeWorkspace } from './services/auth-service';
 import { createCorsHeaders, handleOptions } from './http/cors';
 import { errorResponse, jsonResponse, notFoundResponse } from './http/responses';
@@ -64,6 +64,12 @@ export async function handleRequest(request: Request, env: Env, ctx: ExecutionCo
     if (request.method === 'GET' && url.pathname === '/api/insights') {
       const workspace = await authenticateSession(request, env);
       const result = await getInsights(url.searchParams, env, workspace);
+      return jsonResponse(result, { headers: corsHeaders, requestId });
+    }
+
+    if (request.method === 'GET' && url.pathname === '/api/usage') {
+      const workspace = await authenticateSession(request, env);
+      const result = await getUsageMetrics(url.searchParams, env, workspace);
       return jsonResponse(result, { headers: corsHeaders, requestId });
     }
 

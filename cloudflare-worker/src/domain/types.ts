@@ -68,3 +68,56 @@ export type ReviewResponse = {
   product_area: string | null;
   created_at: string;
 };
+
+export type LlmUsage = {
+  promptTokens: number | null;
+  completionTokens: number | null;
+  totalTokens: number | null;
+};
+
+export type UsageEventStatus = 'success' | 'error';
+export type UsageEventRoute = 'demo_review' | 'private_review';
+
+export type UsageEventInput = {
+  id: string;
+  workspaceId: string | null;
+  requestId: string;
+  route: UsageEventRoute;
+  status: UsageEventStatus;
+  provider: 'gemini';
+  model: string;
+  channel?: string | null;
+  productArea?: string | null;
+  textLength: number;
+  providerStatus?: number | null;
+  latencyMs?: number | null;
+  usage?: LlmUsage | null;
+  estimatedCostUsd?: number | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  reviewId?: string | null;
+};
+
+export type UsageEventRecord = {
+  id: string;
+  workspace_id: string | null;
+  request_id: string;
+  route: UsageEventRoute;
+  operation: string;
+  status: UsageEventStatus;
+  provider: string;
+  model: string;
+  channel: string | null;
+  product_area: string | null;
+  text_length: number;
+  provider_status: number | null;
+  latency_ms: number | null;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  total_tokens: number | null;
+  estimated_cost_usd: number | null;
+  error_code: string | null;
+  error_message: string | null;
+  review_id: string | null;
+  created_at: string;
+};

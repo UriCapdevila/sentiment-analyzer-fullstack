@@ -8,7 +8,8 @@ import {
   toReviewResponse,
 } from '../repositories/feedback-repository';
 import { WorkspaceSession } from '../domain/types';
-import { ValidationError } from '../domain/errors';
+import { DependencyError, ValidationError } from '../domain/errors';
+import { insertUsageEvent, selectUsageSummary } from '../repositories/usage-repository';
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT = 100;
@@ -22,66 +23,145 @@ export async function analyzeAndStoreReview(
 ): Promise<unknown> {
   const input = validateReviewInput(body, env);
   await assertMonthlyLimit(env, workspace);
-  const { analysis, model, latencyMs } = await analyzeWithGemini(input.text, env, requestId);
-  const record = await insertReview(env.DB, {
-    id: crypto.randomUUID(),
-    workspaceId: workspace.workspaceId,
-    input,
-    analysis,
-    model,
-    latencyMs,
-  });
+  const modelName = env.GEMINI_MODEL || 'gemini-2.5-flash';
 
-  ctx.waitUntil(
-    Promise.resolve(
-      console.log(
-        JSON.stringify({
-          level: 'info',
-          event: 'review_saved',
-          requestId,
-          reviewId: record.id,
-          workspaceId: workspace.workspaceId,
-          textLength: input.text.length,
-          label: analysis.label,
-          severity: analysis.severity,
-          churnRisk: analysis.churn_risk,
-        }),
+  try {
+    const { analysis, model, latencyMs, usage } = await analyzeWithGemini(input.text, env, requestId);
+    const record = await insertReview(env.DB, {
+      id: crypto.randomUUID(),
+      workspaceId: workspace.workspaceId,
+      input,
+      analysis,
+      model,
+      latencyMs,
+    });
+
+    await insertUsageEvent(env.DB, {
+      id: crypto.randomUUID(),
+      workspaceId: workspace.workspaceId,
+      requestId,
+      route: 'private_review',
+      status: 'success',
+      provider: 'gemini',
+      model,
+      channel: input.channel || null,
+      productArea: input.productArea || null,
+      textLength: input.text.length,
+      providerStatus: 200,
+      latencyMs,
+      usage,
+      reviewId: record.id,
+    });
+
+    ctx.waitUntil(
+      Promise.resolve(
+        console.log(
+          JSON.stringify({
+            level: 'info',
+            event: 'review_saved',
+            requestId,
+            reviewId: record.id,
+            workspaceId: workspace.workspaceId,
+            textLength: input.text.length,
+            label: analysis.label,
+            severity: analysis.severity,
+            churnRisk: analysis.churn_risk,
+          }),
+        ),
       ),
-    ),
-  );
+    );
 
-  return toReviewResponse(record);
+    return toReviewResponse(record);
+  } catch (error) {
+    await insertUsageEvent(env.DB, {
+      id: crypto.randomUUID(),
+      workspaceId: workspace.workspaceId,
+      requestId,
+      route: 'private_review',
+      status: 'error',
+      provider: 'gemini',
+      model: extractErrorModel(error, modelName),
+      channel: input.channel || null,
+      productArea: input.productArea || null,
+      textLength: input.text.length,
+      providerStatus: error instanceof DependencyError ? error.statusCode || null : null,
+      latencyMs: extractErrorLatency(error),
+      errorCode: error instanceof DependencyError ? error.code : 'analysis_failed',
+      errorMessage: error instanceof Error ? error.message : 'No pudimos analizar el feedback.',
+    });
+
+    throw error;
+  }
 }
 
 export async function analyzeDemoReview(body: unknown, env: Env, requestId: string): Promise<unknown> {
   const input = validateReviewInput(body, env);
-  const { analysis, model, latencyMs } = await analyzeWithGemini(input.text, env, requestId);
-  const createdAt = new Date().toISOString();
+  const modelName = env.GEMINI_MODEL || 'gemini-2.5-flash';
 
-  console.log(
-    JSON.stringify({
-      level: 'info',
-      event: 'demo_review_analyzed',
+  try {
+    const { analysis, model, latencyMs, usage } = await analyzeWithGemini(input.text, env, requestId);
+    const createdAt = new Date().toISOString();
+
+    await insertUsageEvent(env.DB, {
+      id: crypto.randomUUID(),
+      workspaceId: null,
       requestId,
-      textLength: input.text.length,
-      label: analysis.label,
-      severity: analysis.severity,
-      churnRisk: analysis.churn_risk,
+      route: 'demo_review',
+      status: 'success',
+      provider: 'gemini',
       model,
+      channel: input.channel || null,
+      productArea: input.productArea || null,
+      textLength: input.text.length,
+      providerStatus: 200,
       latencyMs,
-    }),
-  );
+      usage,
+    });
 
-  return {
-    id: `demo-${crypto.randomUUID()}`,
-    original_text: input.text,
-    channel: input.channel || null,
-    customer_ref: input.customerRef || null,
-    product_area: input.productArea || null,
-    created_at: createdAt,
-    persisted: false,
-    analysis,
-  };
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        event: 'demo_review_analyzed',
+        requestId,
+        textLength: input.text.length,
+        label: analysis.label,
+        severity: analysis.severity,
+        churnRisk: analysis.churn_risk,
+        model,
+        latencyMs,
+      }),
+    );
+
+    return {
+      id: `demo-${crypto.randomUUID()}`,
+      original_text: input.text,
+      channel: input.channel || null,
+      customer_ref: input.customerRef || null,
+      product_area: input.productArea || null,
+      created_at: createdAt,
+      persisted: false,
+      analysis,
+    };
+  } catch (error) {
+    await insertUsageEvent(env.DB, {
+      id: crypto.randomUUID(),
+      workspaceId: null,
+      requestId,
+      route: 'demo_review',
+      status: 'error',
+      provider: 'gemini',
+      model: extractErrorModel(error, modelName),
+      channel: input.channel || null,
+      productArea: input.productArea || null,
+      textLength: input.text.length,
+      providerStatus: error instanceof DependencyError ? error.statusCode || null : null,
+      latencyMs: extractErrorLatency(error),
+      errorCode: error instanceof DependencyError ? error.code : 'analysis_failed',
+      errorMessage: error instanceof Error ? error.message : 'No pudimos analizar el feedback.',
+    });
+
+    throw error;
+  }
 }
 
 export async function listReviews(
@@ -139,6 +219,46 @@ export async function getInsights(
   };
 }
 
+export async function getUsageMetrics(
+  searchParams: URLSearchParams,
+  env: Env,
+  workspace: WorkspaceSession,
+): Promise<unknown> {
+  const days = clampInteger(Number(searchParams.get('days') || 7), 1, 90);
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const usage = await selectUsageSummary(env.DB, workspace.workspaceId, since);
+  const total = usage.totals.total;
+
+  return {
+    window: {
+      days,
+      since,
+    },
+    totals: {
+      total,
+      successful: usage.totals.successful,
+      failed: usage.totals.failed,
+      rateLimited: usage.totals.rate_limited,
+      successRate: total > 0 ? Math.round((usage.totals.successful / total) * 100) : 0,
+      avgLatencyMs: usage.totals.avg_latency_ms,
+      totalTokens: usage.totals.total_tokens,
+      promptTokens: usage.totals.prompt_tokens,
+      completionTokens: usage.totals.completion_tokens,
+    },
+    byRoute: usage.byRoute,
+    byStatus: usage.byStatus,
+    byProviderStatus: usage.byProviderStatus,
+    recentErrors: usage.recentErrors.map((event) => ({
+      id: event.id,
+      route: event.route,
+      providerStatus: event.provider_status,
+      errorCode: event.error_code,
+      errorMessage: event.error_message,
+      createdAt: event.created_at,
+    })),
+  };
+}
+
 async function assertMonthlyLimit(env: Env, workspace: WorkspaceSession): Promise<void> {
   if (!workspace.monthlyAnalysisLimit) {
     return;
@@ -162,4 +282,22 @@ function clampInteger(value: number, min: number, max: number): number {
   }
 
   return Math.min(max, Math.max(min, Math.floor(value)));
+}
+
+function extractErrorLatency(error: unknown): number | null {
+  if (!(error instanceof DependencyError)) {
+    return null;
+  }
+
+  const latencyMs = Number(error.metadata.latencyMs);
+
+  return Number.isFinite(latencyMs) ? Math.max(0, Math.round(latencyMs)) : null;
+}
+
+function extractErrorModel(error: unknown, fallbackModel: string): string {
+  if (!(error instanceof DependencyError)) {
+    return fallbackModel;
+  }
+
+  return typeof error.metadata.model === 'string' ? error.metadata.model : fallbackModel;
 }
