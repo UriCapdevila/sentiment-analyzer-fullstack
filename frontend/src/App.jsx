@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import './App.css'
 
@@ -8,6 +8,9 @@ const DEMO_HISTORY_KEY = 'insightpulse.demoHistory.v1'
 const AUTH_STORAGE_KEY = 'insightpulse.auth.v1'
 const DEMO_HISTORY_TTL_MS = 30 * 60 * 1000
 const MAX_DEMO_HISTORY = 8
+const MAX_CSV_FILE_BYTES = 1024 * 1024
+const MAX_CSV_PROCESS_ROWS = 10
+const CSV_PREVIEW_ROWS = 5
 
 const EXAMPLE_REVIEW = 'Me gusta que el producto sea facil de usar, pero el checkout falla seguido, soporte tarda demasiado y ya estoy evaluando otra opcion.'
 
@@ -59,6 +62,7 @@ const sentimentCopy = {
 
 const channelOptions = ['manual', 'support', 'survey', 'sales', 'app-store']
 const areaOptions = ['checkout', 'billing', 'onboarding', 'support', 'performance', 'general']
+const csvTextHeaderHints = ['feedback', 'review', 'opinion', 'comentario', 'resena', 'texto', 'text', 'message', 'mensaje']
 
 const platformModules = [
   {
@@ -311,6 +315,157 @@ function authHeaders(session) {
   return {
     Authorization: `Bearer ${session.token}`,
   }
+}
+
+function normalizeCsvHeader(value) {
+  return String(value || '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function countUnquotedDelimiter(line, delimiter) {
+  let count = 0
+  let inQuotes = false
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index]
+    const nextChar = line[index + 1]
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        index += 1
+      } else {
+        inQuotes = !inQuotes
+      }
+      continue
+    }
+
+    if (char === delimiter && !inQuotes) {
+      count += 1
+    }
+  }
+
+  return count
+}
+
+function detectCsvDelimiter(text) {
+  const firstLine = text.split(/\r?\n/).find((line) => line.trim()) || ''
+  const semicolons = countUnquotedDelimiter(firstLine, ';')
+  const commas = countUnquotedDelimiter(firstLine, ',')
+
+  return semicolons > commas ? ';' : ','
+}
+
+function parseCsv(text) {
+  const delimiter = detectCsvDelimiter(text)
+  const rows = []
+  let row = []
+  let cell = ''
+  let inQuotes = false
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]
+    const nextChar = text[index + 1]
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        cell += '"'
+        index += 1
+      } else {
+        inQuotes = !inQuotes
+      }
+      continue
+    }
+
+    if (char === delimiter && !inQuotes) {
+      row.push(cell)
+      cell = ''
+      continue
+    }
+
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && nextChar === '\n') {
+        index += 1
+      }
+
+      row.push(cell)
+      if (row.some((value) => value.trim())) {
+        rows.push(row)
+      }
+      row = []
+      cell = ''
+      continue
+    }
+
+    cell += char
+  }
+
+  row.push(cell)
+  if (row.some((value) => value.trim())) {
+    rows.push(row)
+  }
+
+  return rows
+}
+
+function buildCsvDataset(text) {
+  const parsedRows = parseCsv(text)
+
+  if (parsedRows.length < 2) {
+    throw new Error('El CSV necesita encabezados y al menos una fila de datos.')
+  }
+
+  const headerCounts = new Map()
+  const headers = parsedRows[0].map((rawHeader, index) => {
+    const baseHeader = rawHeader.trim() || `Columna ${index + 1}`
+    const count = headerCounts.get(baseHeader) || 0
+    headerCounts.set(baseHeader, count + 1)
+
+    return count ? `${baseHeader} ${count + 1}` : baseHeader
+  })
+
+  const rows = parsedRows.slice(1)
+    .map((values, rowIndex) => headers.reduce((acc, header, columnIndex) => {
+      acc[header] = values[columnIndex]?.trim() || ''
+      acc.__rowNumber = rowIndex + 2
+      return acc
+    }, {}))
+    .filter((rowItem) => headers.some((header) => rowItem[header]))
+
+  if (!rows.length) {
+    throw new Error('No encontramos filas con contenido para analizar.')
+  }
+
+  return { headers, rows }
+}
+
+function chooseCsvTextColumn(headers) {
+  return headers.find((header) => {
+    const normalizedHeader = normalizeCsvHeader(header)
+    return csvTextHeaderHints.some((hint) => normalizedHeader.includes(hint))
+  }) || headers[0] || ''
+}
+
+function escapeCsvCell(value) {
+  const text = String(value ?? '')
+
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`
+  }
+
+  return text
+}
+
+function downloadTextFile(filename, content, type = 'text/plain;charset=utf-8') {
+  const blob = new Blob([content], { type })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 function isSameDemoInput(review, input) {
@@ -965,6 +1120,7 @@ POST /api/review
 }
 
 function PrivateApp() {
+  const csvInputRef = useRef(null)
   const [session, setSession] = useState(() => readAuthSession())
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -980,6 +1136,26 @@ function PrivateApp() {
   const [appCustomerRef, setAppCustomerRef] = useState('')
   const [appResult, setAppResult] = useState(null)
   const [appSubmitting, setAppSubmitting] = useState(false)
+  const [csvFileName, setCsvFileName] = useState('')
+  const [csvHeaders, setCsvHeaders] = useState([])
+  const [csvRows, setCsvRows] = useState([])
+  const [csvColumn, setCsvColumn] = useState('')
+  const [csvStatus, setCsvStatus] = useState('')
+  const [csvError, setCsvError] = useState('')
+  const [csvProcessing, setCsvProcessing] = useState(false)
+  const [csvProcessed, setCsvProcessed] = useState(0)
+  const [csvResults, setCsvResults] = useState([])
+
+  const csvPreviewRows = useMemo(() => csvRows.slice(0, CSV_PREVIEW_ROWS), [csvRows])
+  const csvRowsWithText = useMemo(() => {
+    if (!csvColumn) return []
+
+    return csvRows.filter((row) => String(row[csvColumn] || '').trim())
+  }, [csvRows, csvColumn])
+  const csvRowsToProcess = useMemo(
+    () => csvRowsWithText.slice(0, MAX_CSV_PROCESS_ROWS),
+    [csvRowsWithText],
+  )
 
   useEffect(() => {
     if (!session) return
@@ -1081,6 +1257,138 @@ function PrivateApp() {
     }
   }
 
+  const resetCsvImport = () => {
+    if (csvInputRef.current) {
+      csvInputRef.current.value = ''
+    }
+
+    setCsvFileName('')
+    setCsvHeaders([])
+    setCsvRows([])
+    setCsvColumn('')
+    setCsvStatus('')
+    setCsvError('')
+    setCsvProcessing(false)
+    setCsvProcessed(0)
+    setCsvResults([])
+  }
+
+  const handleCsvFileChange = async (event) => {
+    const file = event.target.files?.[0]
+
+    resetCsvImport()
+
+    if (!file) return
+
+    setCsvFileName(file.name)
+
+    if (file.size > MAX_CSV_FILE_BYTES) {
+      setCsvError('El archivo supera 1 MB. Para el MVP conviene procesar lotes chicos y controlados.')
+      return
+    }
+
+    try {
+      setCsvStatus('Leyendo archivo...')
+      const text = await file.text()
+      const dataset = buildCsvDataset(text)
+      const detectedColumn = chooseCsvTextColumn(dataset.headers)
+
+      setCsvHeaders(dataset.headers)
+      setCsvRows(dataset.rows)
+      setCsvColumn(detectedColumn)
+      setCsvStatus(`${dataset.rows.length} filas listas. Se procesaran hasta ${MAX_CSV_PROCESS_ROWS} por corrida.`)
+    } catch (err) {
+      setCsvError(err.message || 'No pudimos leer el CSV. Revisa el formato e intenta nuevamente.')
+      setCsvStatus('')
+    }
+  }
+
+  const handleProcessCsv = async () => {
+    if (!session || !csvColumn || csvRowsToProcess.length === 0) return
+
+    setCsvProcessing(true)
+    setCsvProcessed(0)
+    setCsvResults([])
+    setCsvError('')
+    setCsvStatus(`Procesando 0/${csvRowsToProcess.length} filas...`)
+
+    const nextResults = []
+
+    for (const row of csvRowsToProcess) {
+      const rowNumber = row.__rowNumber
+      const text = String(row[csvColumn] || '').trim().slice(0, MAX_TEXT_LENGTH)
+
+      try {
+        const response = await axios.post(
+          `${API_URL}/api/review`,
+          {
+            text,
+            channel: 'csv',
+            productArea: 'general',
+            customerRef: csvFileName ? `${csvFileName}#${rowNumber}` : `csv#${rowNumber}`,
+          },
+          { headers: authHeaders(session) },
+        )
+        const normalizedResult = normalizeReviewResponse(response.data)
+
+        nextResults.push({
+          rowNumber,
+          ok: true,
+          text,
+          result: normalizedResult,
+        })
+        setAppResult(normalizedResult)
+      } catch (err) {
+        nextResults.push({
+          rowNumber,
+          ok: false,
+          text,
+          error: getApiErrorMessage(err),
+        })
+      }
+
+      setCsvProcessed(nextResults.length)
+      setCsvResults([...nextResults])
+      setCsvStatus(`Procesando ${nextResults.length}/${csvRowsToProcess.length} filas...`)
+    }
+
+    const successfulResults = nextResults
+      .filter((item) => item.ok)
+      .map((item) => item.result)
+
+    if (successfulResults.length) {
+      setAppReviews((current) => [
+        ...successfulResults.reverse(),
+        ...current.filter((review) => !successfulResults.some((result) => result.id === review.id)),
+      ].slice(0, 8))
+      await loadPrivateData(session)
+    }
+
+    setCsvStatus(`Listo: ${successfulResults.length}/${nextResults.length} filas procesadas correctamente.`)
+    setCsvProcessing(false)
+  }
+
+  const handleExportCsvResults = () => {
+    if (!csvResults.length) return
+
+    const headers = ['fila', 'estado', 'sentimiento', 'riesgo', 'impacto', 'resumen', 'accion', 'error']
+    const rows = csvResults.map((item) => [
+      item.rowNumber,
+      item.ok ? 'ok' : 'error',
+      item.result?.analysis?.label || '',
+      item.result ? formatRisk(item.result.analysis.churn_risk) : '',
+      item.result ? `${normalizeImpactScore(item.result.analysis.impact_score)}%` : '',
+      item.result?.analysis?.summary || '',
+      item.result?.analysis?.recommended_action || '',
+      item.error || '',
+    ])
+    const content = [headers, ...rows]
+      .map((row) => row.map(escapeCsvCell).join(','))
+      .join('\n')
+
+    downloadTextFile('insightpulse-resultados.csv', content, 'text/csv;charset=utf-8')
+  }
+
   if (!session) {
     return (
       <main className="private-shell login-shell">
@@ -1147,6 +1455,7 @@ function PrivateApp() {
         </a>
         <nav aria-label="Panel privado">
           <a href="#overview">Overview</a>
+          <a href="#csv-import">CSV</a>
           <a href="#manual-analysis">Analisis manual</a>
           <a href="#history">Historial</a>
         </nav>
@@ -1189,6 +1498,132 @@ function PrivateApp() {
             <strong>{usagePercent}%</strong>
             <p>del limite mensual</p>
           </article>
+        </section>
+
+        <section className="private-card csv-card" id="csv-import">
+          <div className="card-heading horizontal">
+            <div>
+              <p className="eyebrow">Carga por archivo</p>
+              <h2>Analizar CSV</h2>
+              <p>Procesa lotes chicos desde el workspace privado y guarda los resultados reales en el historial.</p>
+            </div>
+            <div className="csv-limit-badge">
+              <span>Lote MVP</span>
+              <strong>{MAX_CSV_PROCESS_ROWS} filas</strong>
+            </div>
+          </div>
+
+          <div className="csv-layout">
+            <label className="csv-file-picker" htmlFor="csv-file">
+              <span>{csvFileName || 'Seleccionar CSV'}</span>
+              <input
+                ref={csvInputRef}
+                id="csv-file"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleCsvFileChange}
+                disabled={csvProcessing}
+              />
+            </label>
+
+            <div className="csv-controls">
+              <label>
+                Columna de feedback
+                <select
+                  value={csvColumn}
+                  onChange={(event) => setCsvColumn(event.target.value)}
+                  disabled={!csvHeaders.length || csvProcessing}
+                >
+                  {!csvHeaders.length && <option value="">Sin archivo</option>}
+                  {csvHeaders.map((header) => (
+                    <option key={header} value={header}>{header}</option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="csv-actions">
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={handleProcessCsv}
+                  disabled={csvProcessing || !csvRowsToProcess.length}
+                >
+                  {csvProcessing ? `Procesando ${csvProcessed}/${csvRowsToProcess.length}` : 'Procesar CSV'}
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={resetCsvImport}
+                  disabled={csvProcessing || (!csvFileName && !csvResults.length)}
+                >
+                  Limpiar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {csvError && <p className="error-message" role="alert">{csvError}</p>}
+          {csvStatus && <p className="csv-status">{csvStatus}</p>}
+
+          {csvPreviewRows.length > 0 && (
+            <div className="csv-preview">
+              <div className="csv-preview-header">
+                <strong>Preview</strong>
+                <span>{csvRowsWithText.length} filas con texto detectado</span>
+              </div>
+              <div className="csv-table-wrap">
+                <table className="csv-table">
+                  <thead>
+                    <tr>
+                      <th>Fila</th>
+                      {csvHeaders.slice(0, 4).map((header) => (
+                        <th key={header}>{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvPreviewRows.map((row) => (
+                      <tr key={row.__rowNumber}>
+                        <td>{row.__rowNumber}</td>
+                        {csvHeaders.slice(0, 4).map((header) => (
+                          <td key={header}>{row[header] || '-'}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {csvResults.length > 0 && (
+            <div className="csv-results">
+              <div className="csv-preview-header">
+                <strong>Resultados del lote</strong>
+                <button className="ghost-button" type="button" onClick={handleExportCsvResults}>
+                  Exportar
+                </button>
+              </div>
+
+              <div className="csv-result-grid">
+                {csvResults.map((item) => (
+                  <article className={`csv-result ${item.ok ? getSentimentData(item.result).className : 'failed'}`} key={item.rowNumber}>
+                    <div>
+                      <span>Fila {item.rowNumber}</span>
+                      <strong>{item.ok ? item.result.analysis.label : 'Error'}</strong>
+                    </div>
+                    <p>{item.ok ? item.result.analysis.summary : item.error}</p>
+                    {item.ok && (
+                      <div className="signal-meta">
+                        <span>Riesgo {formatRisk(item.result.analysis.churn_risk)}</span>
+                        <span>Impacto {normalizeImpactScore(item.result.analysis.impact_score)}%</span>
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="app-grid">
