@@ -119,7 +119,8 @@
 }
 
 .main-nav a:hover,
-.main-nav a:focus-visible {
+.main-nav a:focus-visible,
+.main-nav a.active {
   background: var(--surface-soft);
   color: var(--accent-strong);
 }
@@ -127,6 +128,11 @@
 .header-actions {
   justify-content: flex-end;
   gap: 12px;
+}
+
+.site-view-shell {
+  min-height: calc(100vh - 72px);
+  animation: viewFade 180ms ease both;
 }
 
 .header-cta {
@@ -437,6 +443,18 @@
 
 .platform-section {
   padding: 96px 0 54px;
+}
+
+.site-view-shell > .platform-section,
+.site-view-shell > .operating-section,
+.site-view-shell > .use-case-section,
+.site-view-shell > .demo-section,
+.site-view-shell > .signal-section,
+.site-view-shell > .developer-section,
+.site-view-shell > .reliability-section,
+.site-view-shell > .pricing-section,
+.site-view-shell > .final-cta {
+  min-height: min(760px, calc(100vh - 120px));
 }
 
 .section-copy {
@@ -1421,7 +1439,8 @@ pre {
 }
 
 .app-sidebar nav a:hover,
-.app-sidebar nav a:focus-visible {
+.app-sidebar nav a:focus-visible,
+.app-sidebar nav a.active {
   background: var(--surface-soft);
   color: var(--accent-strong);
 }
@@ -1437,6 +1456,12 @@ pre {
   gap: 22px;
   width: min(1220px, 100%);
   padding: clamp(20px, 4vw, 42px);
+}
+
+.app-view-shell {
+  display: grid;
+  gap: 18px;
+  animation: viewFade 180ms ease both;
 }
 
 .app-header {
@@ -1496,6 +1521,49 @@ pre {
   color: var(--ink);
   font-size: 2.2rem;
   line-height: 0.95;
+}
+
+.workspace-module-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.workspace-module-grid button {
+  min-height: 170px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.workspace-module-grid button:hover,
+.workspace-module-grid button:focus-visible {
+  border-color: rgba(0, 167, 167, 0.42);
+  transform: translateY(-2px);
+}
+
+.workspace-module-grid span {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.workspace-module-grid strong {
+  display: block;
+  margin-top: 16px;
+  font-size: 1.2rem;
+}
+
+.workspace-module-grid p {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  line-height: 1.5;
 }
 
 .app-grid {
@@ -1877,6 +1945,10 @@ a:focus-visible {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .workspace-module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .signal-summary {
     position: relative;
     top: auto;
@@ -2041,9 +2113,25 @@ a:focus-visible {
   .app-metrics {
     grid-template-columns: 1fr;
   }
+
+  .workspace-module-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  @keyframes viewFade {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .module-card,
   .use-case-card,
   .signal-card,

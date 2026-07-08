@@ -146,6 +146,23 @@ const pricingPlans = [
   },
 ]
 
+const landingViews = [
+  { id: 'overview', hash: '#top', label: 'Overview' },
+  { id: 'platform', hash: '#platform', label: 'Producto' },
+  { id: 'solutions', hash: '#use-cases', label: 'Soluciones' },
+  { id: 'demo', hash: '#demo', label: 'Demo' },
+  { id: 'developers', hash: '#developers', label: 'Developers' },
+  { id: 'pricing', hash: '#pricing', label: 'Pricing' },
+]
+
+const appViews = [
+  { id: 'overview', hash: '#overview', label: 'Overview' },
+  { id: 'usage', hash: '#usage-health', label: 'Uso' },
+  { id: 'csv', hash: '#csv-import', label: 'CSV' },
+  { id: 'analysis', hash: '#manual-analysis', label: 'Analisis' },
+  { id: 'history', hash: '#history', label: 'Historial' },
+]
+
 function getApiErrorMessage(error) {
   const apiError = error.response?.data?.error
 
@@ -184,6 +201,18 @@ function formatRisk(value) {
 
 function formatNumber(value) {
   return new Intl.NumberFormat('es-AR').format(Number(value || 0))
+}
+
+function getViewFromHash(views, fallbackId) {
+  const activeHash = window.location.hash || views[0]?.hash
+  return views.find((view) => view.hash === activeHash)?.id || fallbackId
+}
+
+function updateHash(hash) {
+  if (window.location.hash !== hash) {
+    window.history.pushState(null, '', hash)
+    window.dispatchEvent(new HashChangeEvent('hashchange'))
+  }
 }
 
 function formatRelativeTime(value) {
@@ -504,6 +533,7 @@ function App() {
 }
 
 function LandingApp() {
+  const [activeLandingView, setActiveLandingView] = useState(() => getViewFromHash(landingViews, 'overview'))
   const [text, setText] = useState('')
   const [channel, setChannel] = useState('manual')
   const [productArea, setProductArea] = useState('checkout')
@@ -525,6 +555,15 @@ function LandingApp() {
     if (cachedReviews[0]) {
       setResult(cachedReviews[0])
     }
+  }, [])
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setActiveLandingView(getViewFromHash(landingViews, 'overview'))
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
   useEffect(() => {
@@ -636,27 +675,46 @@ function LandingApp() {
     setResult(null)
   }
 
+  const navigateLanding = (view) => {
+    if (!view) return
+
+    setActiveLandingView(view.id)
+    updateHash(view.hash)
+  }
+
   return (
     <main className="site-shell">
       <header className="site-header" aria-label="Navegacion principal">
-        <a className="brand" href="#top" aria-label="InsightPulse inicio">
+        <a className="brand" href="#top" aria-label="InsightPulse inicio" onClick={() => navigateLanding(landingViews[0])}>
           <span className="brand-mark" aria-hidden="true">IP</span>
           <strong>InsightPulse</strong>
         </a>
 
         <nav className="main-nav" aria-label="Secciones">
-          <a href="#platform">Producto</a>
-          <a href="#use-cases">Soluciones</a>
-          <a href="#developers">Developers</a>
-          <a href="#pricing">Pricing</a>
+          {landingViews.slice(1).map((view) => (
+            <a
+              aria-current={activeLandingView === view.id ? 'page' : undefined}
+              className={activeLandingView === view.id ? 'active' : ''}
+              href={view.hash}
+              key={view.id}
+              onClick={(event) => {
+                event.preventDefault()
+                navigateLanding(view)
+              }}
+            >
+              {view.label}
+            </a>
+          ))}
         </nav>
 
         <div className="header-actions">
-          <a href="#demo">Demo</a>
           <a className="header-cta" href="/app">Ingresar</a>
         </div>
       </header>
 
+      <div className="site-view-shell" data-view={activeLandingView}>
+      {activeLandingView === 'overview' && (
+      <>
       <section className="hero" id="top">
         <div className="hero-backdrop" aria-hidden="true">
           <div className="hero-product hero-product-main">
@@ -707,8 +765,26 @@ function LandingApp() {
           </p>
 
           <div className="hero-actions">
-            <a className="primary-link" href="#demo">Probar el analizador</a>
-            <a className="secondary-link" href="#platform">Explorar plataforma</a>
+            <a
+              className="primary-link"
+              href="#demo"
+              onClick={(event) => {
+                event.preventDefault()
+                navigateLanding(landingViews.find((view) => view.id === 'demo'))
+              }}
+            >
+              Probar el analizador
+            </a>
+            <a
+              className="secondary-link"
+              href="#platform"
+              onClick={(event) => {
+                event.preventDefault()
+                navigateLanding(landingViews.find((view) => view.id === 'platform'))
+              }}
+            >
+              Explorar plataforma
+            </a>
           </div>
 
           <div className="hero-trust" aria-label="Capacidades actuales">
@@ -728,7 +804,10 @@ function LandingApp() {
         <span>Sales notes</span>
         <span>Slack alerts</span>
       </section>
+      </>
+      )}
 
+      {activeLandingView === 'platform' && (
       <section className="platform-section" id="platform">
         <div className="section-copy">
           <p className="eyebrow">Plataforma</p>
@@ -752,7 +831,10 @@ function LandingApp() {
           ))}
         </div>
       </section>
+      )}
 
+      {activeLandingView === 'solutions' && (
+      <>
       <section className="operating-section">
         <div className="operating-visual" aria-label="Mockup de operaciones">
           <div className="ops-sidebar">
@@ -824,7 +906,11 @@ function LandingApp() {
           ))}
         </div>
       </section>
+      </>
+      )}
 
+      {activeLandingView === 'demo' && (
+      <>
       <section className="demo-section" id="demo">
         <div className="section-copy">
           <p className="eyebrow">Demo funcional</p>
@@ -1031,7 +1117,11 @@ function LandingApp() {
           </div>
         </div>
       </section>
+      </>
+      )}
 
+      {activeLandingView === 'developers' && (
+      <>
       <section className="developer-section" id="developers">
         <div className="developer-copy">
           <p className="eyebrow">Developers</p>
@@ -1101,7 +1191,11 @@ POST /api/review
           </article>
         </div>
       </section>
+      </>
+      )}
 
+      {activeLandingView === 'pricing' && (
+      <>
       <section className="pricing-section" id="pricing">
         <div className="section-copy narrow">
           <p className="eyebrow">Pricing mock</p>
@@ -1119,7 +1213,15 @@ POST /api/review
                   <li key={item}>{item}</li>
                 ))}
               </ul>
-              <a href="#demo">{plan.featured ? 'Validar Growth' : 'Explorar'}</a>
+              <a
+                href="#demo"
+                onClick={(event) => {
+                  event.preventDefault()
+                  navigateLanding(landingViews.find((view) => view.id === 'demo'))
+                }}
+              >
+                {plan.featured ? 'Validar Growth' : 'Explorar'}
+              </a>
             </article>
           ))}
         </div>
@@ -1129,8 +1231,20 @@ POST /api/review
         <p className="eyebrow">InsightPulse</p>
         <h2>El siguiente paso es convertir esta demo en un sistema de decision.</h2>
         <p>Tenemos clasificacion, nube y una narrativa SaaS. Ahora podemos avanzar hacia usuarios, workspaces, integraciones y monetizacion.</p>
-        <a className="primary-link" href="#demo">Probar ahora</a>
+        <a
+          className="primary-link"
+          href="#demo"
+          onClick={(event) => {
+            event.preventDefault()
+            navigateLanding(landingViews.find((view) => view.id === 'demo'))
+          }}
+        >
+          Probar ahora
+        </a>
       </section>
+      </>
+      )}
+      </div>
 
       <footer className="site-footer">
         <strong>InsightPulse</strong>
@@ -1143,6 +1257,7 @@ POST /api/review
 
 function PrivateApp() {
   const csvInputRef = useRef(null)
+  const [activeAppView, setActiveAppView] = useState(() => getViewFromHash(appViews, 'overview'))
   const [session, setSession] = useState(() => readAuthSession())
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -1185,6 +1300,15 @@ function PrivateApp() {
 
     loadPrivateData(session)
   }, [session])
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setActiveAppView(getViewFromHash(appViews, 'overview'))
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
 
   async function loadPrivateData(activeSession) {
     setAppLoading(true)
@@ -1415,6 +1539,13 @@ function PrivateApp() {
     downloadTextFile('insightpulse-resultados.csv', content, 'text/csv;charset=utf-8')
   }
 
+  const navigateApp = (view) => {
+    if (!view) return
+
+    setActiveAppView(view.id)
+    updateHash(view.hash)
+  }
+
   if (!session) {
     return (
       <main className="private-shell login-shell">
@@ -1482,11 +1613,20 @@ function PrivateApp() {
           <strong>InsightPulse</strong>
         </a>
         <nav aria-label="Panel privado">
-          <a href="#overview">Overview</a>
-          <a href="#usage-health">Uso</a>
-          <a href="#csv-import">CSV</a>
-          <a href="#manual-analysis">Analisis manual</a>
-          <a href="#history">Historial</a>
+          {appViews.map((view) => (
+            <a
+              aria-current={activeAppView === view.id ? 'page' : undefined}
+              className={activeAppView === view.id ? 'active' : ''}
+              href={view.hash}
+              key={view.id}
+              onClick={(event) => {
+                event.preventDefault()
+                navigateApp(view)
+              }}
+            >
+              {view.label}
+            </a>
+          ))}
         </nav>
         <button type="button" onClick={handleLogout}>Salir</button>
       </aside>
@@ -1506,6 +1646,9 @@ function PrivateApp() {
 
         {appError && <p className="error-message" role="alert">{appError}</p>}
 
+        <div className="app-view-shell" data-view={activeAppView}>
+        {activeAppView === 'overview' && (
+        <>
         <section className="app-metrics" aria-label="Metricas del workspace">
           <article>
             <span>Total</span>
@@ -1529,6 +1672,33 @@ function PrivateApp() {
           </article>
         </section>
 
+        <section className="workspace-module-grid" aria-label="Modulos del workspace">
+          {appViews.slice(1).map((view) => (
+            <button
+              key={view.id}
+              type="button"
+              onClick={() => navigateApp(view)}
+            >
+              <span>{view.label}</span>
+              <strong>
+                {view.id === 'usage' && 'Controlar consumo'}
+                {view.id === 'csv' && 'Cargar lote'}
+                {view.id === 'analysis' && 'Analizar manual'}
+                {view.id === 'history' && 'Revisar senales'}
+              </strong>
+              <p>
+                {view.id === 'usage' && 'Cuota, fallos, latencia y tokens registrados.'}
+                {view.id === 'csv' && 'Procesamiento controlado para archivos simples.'}
+                {view.id === 'analysis' && 'Carga puntual de feedback real del cliente.'}
+                {view.id === 'history' && 'Feedback persistido y clasificado por el motor.'}
+              </p>
+            </button>
+          ))}
+        </section>
+        </>
+        )}
+
+        {activeAppView === 'usage' && (
         <section className="private-card usage-card" id="usage-health">
           <div className="card-heading horizontal">
             <div>
@@ -1598,7 +1768,9 @@ function PrivateApp() {
             </div>
           </div>
         </section>
+        )}
 
+        {activeAppView === 'csv' && (
         <section className="private-card csv-card" id="csv-import">
           <div className="card-heading horizontal">
             <div>
@@ -1724,7 +1896,9 @@ function PrivateApp() {
             </div>
           )}
         </section>
+        )}
 
+        {activeAppView === 'analysis' && (
         <section className="app-grid">
           <form className="private-card" id="manual-analysis" onSubmit={handlePrivateAnalyze}>
             <div className="card-heading">
@@ -1797,7 +1971,9 @@ function PrivateApp() {
             )}
           </aside>
         </section>
+        )}
 
+        {activeAppView === 'history' && (
         <section className="private-card" id="history">
           <div className="card-heading horizontal">
             <div>
@@ -1836,6 +2012,8 @@ function PrivateApp() {
             ))}
           </div>
         </section>
+        )}
+        </div>
       </section>
     </main>
   )
