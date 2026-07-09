@@ -12,7 +12,7 @@ const MAX_CSV_FILE_BYTES = 1024 * 1024
 const MAX_CSV_PROCESS_ROWS = 10
 const CSV_PREVIEW_ROWS = 5
 
-const EXAMPLE_REVIEW = 'Me gusta que el producto sea facil de usar, pero el checkout falla seguido, soporte tarda demasiado y ya estoy evaluando otra opcion.'
+const EXAMPLE_REVIEW = 'Me gusta que el producto sea fácil de usar, pero el checkout falla seguido, soporte tarda demasiado y ya estoy evaluando otra opción.'
 
 const DEFAULT_INSIGHTS = {
   totals: {
@@ -27,8 +27,8 @@ const DEFAULT_INSIGHTS = {
   topTopics: [
     { topic: 'checkout', count: 24 },
     { topic: 'soporte', count: 18 },
-    { topic: 'billing', count: 15 },
-    { topic: 'onboarding', count: 12 },
+    { topic: 'facturacion', count: 15 },
+    { topic: 'activacion', count: 12 },
   ],
   byArea: [],
   byChannel: [],
@@ -58,28 +58,28 @@ const DEFAULT_USAGE = {
 
 const sentimentCopy = {
   Positivo: {
-    tone: 'Advocacy signal',
-    summary: 'El comentario inclina la conversacion hacia satisfaccion y confianza.',
+    tone: 'Señal de confianza',
+    summary: 'El comentario inclina la conversación hacia satisfacción y confianza.',
     className: 'positive',
     decision: 'Convertir en aprendizaje replicable',
   },
   Negativo: {
-    tone: 'Risk signal',
-    summary: 'El comentario marca friccion y deberia revisarse como posible prioridad.',
+    tone: 'Señal de riesgo',
+    summary: 'El comentario marca fricción y debería revisarse como posible prioridad.',
     className: 'negative',
-    decision: 'Priorizar investigacion y respuesta',
+    decision: 'Priorizar investigación y respuesta',
   },
   Mixto: {
-    tone: 'Mixed opportunity',
-    summary: 'El comentario combina valor percibido con fricciones que pueden afectar adopcion o retencion.',
+    tone: 'Oportunidad mixta',
+    summary: 'El comentario combina valor percibido con fricciones que pueden afectar adopción o retención.',
     className: 'mixed',
-    decision: 'Rescatar valor y remover friccion',
+    decision: 'Rescatar valor y remover fricción',
   },
   Neutro: {
-    tone: 'Context signal',
+    tone: 'Señal de contexto',
     summary: 'El comentario no muestra una inclinacion clara y conviene leer el contexto.',
     className: 'neutral',
-    decision: 'Agrupar con mas feedback similar',
+    decision: 'Agrupar con más opiniones similares',
   },
 }
 
@@ -87,21 +87,45 @@ const channelOptions = ['manual', 'support', 'survey', 'sales', 'app-store']
 const areaOptions = ['checkout', 'billing', 'onboarding', 'support', 'performance', 'general']
 const csvTextHeaderHints = ['feedback', 'review', 'opinion', 'comentario', 'resena', 'texto', 'text', 'message', 'mensaje']
 
+const channelLabels = {
+  manual: 'Manual',
+  support: 'Soporte',
+  survey: 'Encuesta',
+  sales: 'Ventas',
+  'app-store': 'Reseña pública',
+  csv: 'CSV',
+}
+
+const areaLabels = {
+  checkout: 'Checkout',
+  billing: 'Facturacion',
+  onboarding: 'Activacion',
+  support: 'Soporte',
+  performance: 'Rendimiento',
+  general: 'General',
+}
+
+const planLabels = {
+  solo: 'Unipersonal',
+  growth: 'Crecimiento',
+  scale: 'Escala',
+}
+
 const problemSolutionCards = [
   {
     label: 'Antes',
-    title: 'Feedback repartido, decisiones lentas.',
+    title: 'Opiniones dispersas, decisiones lentas.',
     copy: 'Tickets, encuestas y notas quedan en lugares distintos. El equipo llega tarde a los patrones importantes.',
   },
   {
-    label: 'Despues',
+    label: 'Después',
     title: 'Un panel que prioriza por impacto.',
-    copy: 'Cada opinion se convierte en riesgo, tema, severidad y accion recomendada para decidir rapido.',
+    copy: 'Cada opinión se convierte en riesgo, tema, severidad y acción recomendada para decidir rápido.',
   },
   {
     label: 'Resultado',
-    title: 'Menos lectura manual, mas foco.',
-    copy: 'Producto, soporte y revenue ven la misma senal de negocio sin depender de planillas.',
+    title: 'Menos lectura manual, más foco.',
+    copy: 'Producto, soporte e ingresos ven la misma señal de negocio sin depender de planillas.',
   },
 ]
 
@@ -109,56 +133,143 @@ const useCases = [
   {
     team: 'Producto',
     title: 'Detecta fricciones que se repiten antes del roadmap.',
-    points: ['Agrupacion por area', 'Impact score por tema', 'Resumen para discovery'],
+    points: ['Agrupación por área', 'Impacto por tema', 'Resumen para descubrimiento'],
   },
   {
     team: 'Soporte',
-    title: 'Convierte tickets repetidos en senales de operacion.',
-    points: ['Severidad automatica', 'Riesgo de churn', 'Playbooks de respuesta'],
+    title: 'Convierte tickets repetidos en señales de operación.',
+    points: ['Severidad automática', 'Riesgo de abandono', 'Guiones de respuesta'],
   },
   {
-    team: 'Revenue',
+    team: 'Ingresos',
     title: 'Encuentra cuentas en riesgo y objeciones comerciales.',
-    points: ['Segmentos por cliente', 'Alertas de expansion', 'Motivos de perdida'],
+    points: ['Segmentos por cliente', 'Alertas de expansión', 'Motivos de pérdida'],
   },
 ]
 
 const pricingPlans = [
   {
-    name: 'Launch',
+    name: 'Inicio',
     price: 'USD 29',
     copy: 'Para validar el flujo con un equipo chico.',
-    items: ['1 workspace', '1.000 analisis/mes', 'Dashboard base'],
+    items: ['1 espacio de trabajo', '1.000 análisis/mes', 'Panel ejecutivo base'],
   },
   {
-    name: 'Growth',
+    name: 'Crecimiento',
     price: 'USD 99',
-    copy: 'Para equipos que ya operan feedback semanalmente.',
-    items: ['5 workspaces', '10.000 analisis/mes', 'Alertas y segmentos'],
+    copy: 'Para equipos que ya analizan opiniones semanalmente.',
+    items: ['5 espacios de trabajo', '10.000 análisis/mes', 'Alertas y segmentos'],
     featured: true,
   },
   {
-    name: 'Scale',
-    price: 'Custom',
-    copy: 'Para multiples equipos, integraciones y compliance.',
-    items: ['Multi-tenant', 'API dedicada', 'SLA y auditoria'],
+    name: 'Escala',
+    price: 'A medida',
+    copy: 'Para múltiples equipos, integraciones y cumplimiento.',
+    items: ['Multi-tenant', 'API dedicada', 'SLA y auditoría'],
   },
 ]
 
 const landingViews = [
-  { id: 'overview', hash: '#top', label: 'Overview' },
+  { id: 'overview', hash: '#top', label: 'Resumen' },
   { id: 'platform', hash: '#platform', label: 'Problema' },
   { id: 'solutions', hash: '#use-cases', label: 'Soluciones' },
   { id: 'demo', hash: '#demo', label: 'Demo' },
-  { id: 'pricing', hash: '#pricing', label: 'Pricing' },
-  { id: 'faq', hash: '#faq', label: 'FAQ' },
+  { id: 'pricing', hash: '#pricing', label: 'Precios' },
+  { id: 'faq', hash: '#faq', label: 'Preguntas' },
+]
+
+const landingNavItems = [
+  {
+    label: 'Plataforma',
+    viewId: 'platform',
+    children: [
+      { label: 'Resumen del producto', viewId: 'overview' },
+      { label: 'Problema que resuelve', viewId: 'platform' },
+      { label: 'Demo interactiva', viewId: 'demo' },
+    ],
+  },
+  {
+    label: 'Soluciones',
+    viewId: 'solutions',
+    children: [
+      { label: 'Equipos de producto', viewId: 'solutions' },
+      { label: 'Operaciones de soporte', viewId: 'solutions' },
+      { label: 'Equipos comerciales', viewId: 'solutions' },
+    ],
+  },
+  { label: 'Precios', viewId: 'pricing' },
+  { label: 'Clientes', viewId: 'solutions' },
+  {
+    label: 'Compañía',
+    href: '#site-footer',
+    children: [
+      { label: 'TerraData AI Solutions', href: '#site-footer' },
+      { label: 'Misión y valor', href: '#site-footer' },
+      { label: 'Contacto', status: 'Próximamente' },
+    ],
+  },
+  {
+    label: 'Recursos',
+    viewId: 'faq',
+    children: [
+      { label: 'Preguntas frecuentes', viewId: 'faq' },
+      { label: 'Métricas del producto', href: '/app' },
+      { label: 'Guía de carga CSV', status: 'Próximamente' },
+    ],
+  },
+]
+
+const footerColumns = [
+  {
+    title: 'Producto',
+    links: [
+      { label: 'Vista general de plataforma', viewId: 'platform' },
+      { label: 'Análisis CSV', viewId: 'demo' },
+      { label: 'Insights con IA', viewId: 'solutions' },
+      { label: 'Reportes ejecutivos', viewId: 'pricing' },
+      { label: 'Historial privado', href: '/app' },
+      { label: 'Precios', viewId: 'pricing' },
+    ],
+  },
+  {
+    title: 'Soluciones',
+    links: [
+      { label: 'Emprendedores', viewId: 'pricing' },
+      { label: 'Equipos de producto', viewId: 'solutions' },
+      { label: 'Operaciones de soporte', viewId: 'solutions' },
+      { label: 'Equipos comerciales', viewId: 'solutions' },
+      { label: 'Éxito del cliente', viewId: 'solutions' },
+    ],
+  },
+  {
+    title: 'Recursos',
+    links: [
+      { label: 'Preguntas frecuentes', viewId: 'faq' },
+      { label: 'Arquitectura cloud', viewId: 'faq' },
+      { label: 'Métricas de uso', href: '/app' },
+      { label: 'Guía CSV', status: 'Próximamente' },
+      { label: 'Notas de seguridad', status: 'Próximamente' },
+      { label: 'Documentación API', status: 'Próximamente' },
+    ],
+  },
+  {
+    title: 'Compañía',
+    links: [
+      { label: 'TerraData AI Solutions', href: '#top' },
+      { label: 'Misión y valor del producto', href: '#top' },
+      { label: 'Hoja de ruta', status: 'Próximamente' },
+      { label: 'Contacto', status: 'Próximamente' },
+      { label: 'Política de privacidad', status: 'Próximamente' },
+      { label: 'Términos', status: 'Próximamente' },
+    ],
+  },
 ]
 
 const appViews = [
-  { id: 'overview', hash: '#overview', label: 'Overview' },
+  { id: 'overview', hash: '#overview', label: 'Resumen' },
   { id: 'usage', hash: '#usage-health', label: 'Uso' },
   { id: 'csv', hash: '#csv-import', label: 'CSV' },
-  { id: 'analysis', hash: '#manual-analysis', label: 'Analisis' },
+  { id: 'analysis', hash: '#manual-analysis', label: 'Análisis' },
   { id: 'history', hash: '#history', label: 'Historial' },
 ]
 
@@ -169,7 +280,7 @@ function getApiErrorMessage(error) {
     return apiError
   }
 
-  return apiError?.message || 'No pudimos conectar con el servicio de analisis.'
+  return apiError?.message || 'No pudimos conectar con el servicio de análisis.'
 }
 
 function clampPercent(value) {
@@ -196,6 +307,18 @@ function formatRisk(value) {
   }
 
   return copy[value] || 'Sin dato'
+}
+
+function formatChannel(value) {
+  return channelLabels[value] || value || 'Sin canal'
+}
+
+function formatArea(value) {
+  return areaLabels[value] || value || 'General'
+}
+
+function formatPlan(value) {
+  return planLabels[value] || value || 'Sin plan'
 }
 
 function formatNumber(value) {
@@ -276,10 +399,10 @@ function getSentimentData(result) {
   if (!result) {
     return {
       label: 'En espera',
-      tone: 'Ready for review',
-      summary: 'Carga feedback de clientes para generar una lectura accionable.',
+      tone: 'Listo para analizar',
+      summary: 'Carga opiniones de clientes para generar una lectura accionable.',
       className: 'pending',
-      decision: 'Esperando nueva senal',
+      decision: 'Esperando nueva señal',
     }
   }
 
@@ -526,7 +649,7 @@ function formatReportDate(date = new Date()) {
 }
 
 function getReviewAction(review) {
-  return review?.analysis?.recommended_action || 'Revisar contexto y definir proxima accion.'
+  return review?.analysis?.recommended_action || 'Revisar contexto y definir próxima acción.'
 }
 
 function getReviewSummary(review) {
@@ -567,11 +690,11 @@ function buildWorkspaceReport({ workspace, insights, usage, reviews }) {
     `# Reporte InsightPulse - ${workspace.name}`,
     '',
     `Generado: ${formatReportDate()}`,
-    `Plan: ${workspace.plan}`,
+    `Plan: ${formatPlan(workspace.plan)}`,
     '',
     '## Resumen ejecutivo',
     '',
-    insights.executiveSummary || 'Todavia no hay datos suficientes para una lectura ejecutiva del periodo.',
+    insights.executiveSummary || 'Todavía no hay datos suficientes para una lectura ejecutiva del período.',
     '',
     '## Indicadores',
     '',
@@ -579,38 +702,38 @@ function buildWorkspaceReport({ workspace, insights, usage, reviews }) {
     `- Riesgo alto: ${formatNumber(totals.highChurnRisk || 0)}`,
     `- Severidad alta: ${formatNumber(totals.highSeverity || 0)}`,
     `- Impacto promedio: ${formatNumber(totals.avgImpactScore || 0)}%`,
-    `- Uso del plan: ${formatNumber(totals.total || 0)}/${workspace.monthlyAnalysisLimit || 'sin limite'}`,
+    `- Uso del plan: ${formatNumber(totals.total || 0)}/${workspace.monthlyAnalysisLimit || 'sin límite'}`,
     `- Tokens registrados: ${formatNumber(usageTotals.totalTokens || 0)}`,
     '',
     '## Distribucion por sentimiento',
     '',
     ...(bySentiment.length
       ? bySentiment.map((item) => `- ${item.label}: ${formatNumber(item.total)} (${item.rate || 0}%)`)
-      : ['- Sin datos todavia.']),
+      : ['- Sin datos todavía.']),
     '',
-    '## Areas con mayor atencion',
+    '## Áreas con mayor atención',
     '',
     ...(byArea.length
       ? byArea.map((item) => `- ${item.label}: ${formatNumber(item.total)} opiniones, ${formatNumber(item.highChurnRisk || 0)} con riesgo alto, impacto ${formatNumber(item.avgImpactScore || 0)}%.`)
-      : ['- Sin datos todavia.']),
+      : ['- Sin datos todavía.']),
     '',
     '## Temas recurrentes',
     '',
     ...(topTopics.length
       ? topTopics.slice(0, 8).map((topic) => `- ${topic.topic}: ${formatNumber(topic.count)} apariciones`)
-      : ['- Sin temas detectados todavia.']),
+      : ['- Sin temas detectados todavía.']),
     '',
     '## Prioridades sugeridas',
     '',
     ...(priority.length
-      ? priority.map((review, index) => `${index + 1}. ${getReviewSummary(review)} Accion: ${getReviewAction(review)}`)
-      : ['- Sin prioridades todavia.']),
+      ? priority.map((review, index) => `${index + 1}. ${getReviewSummary(review)} Acción: ${getReviewAction(review)}`)
+      : ['- Sin prioridades todavía.']),
     '',
-    '## Feedback reciente',
+    '## Opiniones recientes',
     '',
     ...(reviews.length
       ? reviews.slice(0, 8).map((review) => `- [${review.analysis?.label || 'Sin dato'}] ${getReviewSummary(review)}`)
-      : ['- Sin feedback reciente.']),
+      : ['- Sin opiniones recientes.']),
     '',
   ]
 
@@ -700,7 +823,7 @@ function LandingApp() {
     ? clampPercent(analysis.confidence * 100)
     : null
 
-  const activeRecommendation = analysis?.recommended_action || 'Analiza una nueva opinion para convertirla en decision de producto.'
+  const activeRecommendation = analysis?.recommended_action || 'Analiza una nueva opinión para convertirla en decisión de producto.'
   const activeSummary = analysis?.summary || sentiment.summary
   const highRiskCount = recentReviews.filter((review) => review.analysis?.churn_risk === 'high').length
   const latestSignal = recentReviews[0]
@@ -780,6 +903,23 @@ function LandingApp() {
     updateHash(view.hash)
   }
 
+  const handleLandingNav = (event, item) => {
+    if (item.viewId) {
+      event.preventDefault()
+      navigateLanding(landingViews.find((view) => view.id === item.viewId))
+      return
+    }
+
+    if (item.href?.startsWith('#')) {
+      event.preventDefault()
+      const target = document.querySelector(item.href)
+      if (target) {
+        window.history.pushState(null, '', item.href)
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }
+  }
+
   return (
     <main className="site-shell">
       <header className="site-header" aria-label="Navegacion principal">
@@ -789,24 +929,54 @@ function LandingApp() {
         </a>
 
         <nav className="main-nav" aria-label="Secciones">
-          {landingViews.slice(1).map((view) => (
-            <a
-              aria-current={activeLandingView === view.id ? 'page' : undefined}
-              className={activeLandingView === view.id ? 'active' : ''}
-              href={view.hash}
-              key={view.id}
-              onClick={(event) => {
-                event.preventDefault()
-                navigateLanding(view)
-              }}
-            >
-              {view.label}
-            </a>
+          {landingNavItems.map((item) => (
+            <div className={`nav-group ${item.children ? 'has-menu' : ''}`} key={item.label}>
+              <a
+                aria-current={activeLandingView === item.viewId ? 'page' : undefined}
+                className={`nav-link ${activeLandingView === item.viewId ? 'active' : ''}`}
+                href={item.viewId ? landingViews.find((view) => view.id === item.viewId)?.hash : item.href}
+                onClick={(event) => handleLandingNav(event, item)}
+              >
+                {item.label}
+              </a>
+
+              {item.children && (
+                <div className="nav-dropdown" role="menu" aria-label={`Opciones de ${item.label}`}>
+                  {item.children.map((child) => (
+                    child.status ? (
+                      <span className="nav-dropdown-disabled" key={child.label}>
+                        {child.label}
+                        <small>{child.status}</small>
+                      </span>
+                    ) : (
+                      <a
+                        href={child.viewId ? landingViews.find((view) => view.id === child.viewId)?.hash : child.href}
+                        key={child.label}
+                        onClick={(event) => handleLandingNav(event, child)}
+                        role="menuitem"
+                      >
+                        {child.label}
+                      </a>
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
           ))}
         </nav>
 
         <div className="header-actions">
-          <a className="header-cta" href="/app">Ingresar</a>
+          <a className="header-button secondary" href="/app">Empezar gratis</a>
+          <a
+            className="header-button primary"
+            href="#demo"
+            onClick={(event) => {
+              event.preventDefault()
+              navigateLanding(landingViews.find((view) => view.id === 'demo'))
+            }}
+          >
+            Reservar demo
+          </a>
         </div>
       </header>
 
@@ -820,46 +990,46 @@ function LandingApp() {
               <span></span>
               <span></span>
               <span></span>
-              <strong>Command center</strong>
+              <strong>Centro de decisión</strong>
             </div>
             <div className="mock-grid">
               <div className="mock-metric strong">
-                <span>Feedback processed</span>
+                <span>Opiniones procesadas</span>
                 <strong>{insights.totals.total}</strong>
               </div>
               <div className="mock-metric danger">
-                <span>Churn risk</span>
+                <span>Riesgo de abandono</span>
                 <strong>{insights.totals.riskRate}%</strong>
               </div>
               <div className="mock-feed">
                 <span className="feed-hot"></span>
                 <div>
-                  <strong>Checkout failures rising</strong>
-                  <small>24 mentions / high impact</small>
+                  <strong>Fallas de checkout en aumento</strong>
+                  <small>24 menciones / impacto alto</small>
                 </div>
               </div>
               <div className="mock-feed">
                 <span className="feed-warm"></span>
                 <div>
-                  <strong>Support delay pattern</strong>
-                  <small>18 mentions / churn watch</small>
+                  <strong>Patrón de demora en soporte</strong>
+                  <small>18 menciones / riesgo observado</small>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="hero-product hero-product-side">
-            <span>LLM classification</span>
+            <span>Clasificación</span>
             <strong>Mixto</strong>
-            <small>Severidad alta / accion recomendada</small>
+            <small>Severidad alta / acción recomendada</small>
           </div>
         </div>
 
         <div className="hero-content">
-          <p className="eyebrow">SaaS de inteligencia de feedback</p>
+          <p className="eyebrow">SaaS de inteligencia de opiniones</p>
           <h1>Detecta clientes en riesgo antes de perderlos.</h1>
           <p>
-            InsightPulse analiza opiniones, tickets y CSV para priorizar problemas reales por impacto, severidad y riesgo de churn.
+            InsightPulse analiza opiniones, tickets y CSV para priorizar problemas reales por impacto, severidad y riesgo de abandono.
           </p>
 
           <div className="hero-actions">
@@ -885,9 +1055,9 @@ function LandingApp() {
             </a>
           </div>
 
-          <div className="hero-trust" aria-label="Prueba rapida de valor">
+          <div className="hero-trust" aria-label="Prueba rápida de valor">
             <span>CSV en minutos</span>
-            <span>Riesgo de churn</span>
+            <span>Riesgo de abandono</span>
             <span>Resumen ejecutivo</span>
             <span>Historial privado</span>
           </div>
@@ -897,9 +1067,9 @@ function LandingApp() {
       <section className="logo-strip" aria-label="Prueba social">
         <span>Para equipos de producto</span>
         <span>Soporte</span>
-        <span>Revenue</span>
-        <span>Founders</span>
-        <span>Customer Success</span>
+        <span>Ingresos</span>
+        <span>Fundadores</span>
+        <span>Éxito del cliente</span>
       </section>
       </>
       )}
@@ -908,8 +1078,8 @@ function LandingApp() {
       <section className="platform-section" id="platform">
         <div className="section-copy">
           <p className="eyebrow">Problema vs solucion</p>
-          <h2>El feedback no sirve si llega tarde a la decision.</h2>
-          <p>InsightPulse reduce ruido operativo y muestra que requiere atencion ahora.</p>
+          <h2>Las opiniones no sirven si llegan tarde a la decisión.</h2>
+          <p>InsightPulse reduce ruido operativo y muestra qué requiere atención ahora.</p>
         </div>
 
         <div className="module-grid">
@@ -927,18 +1097,18 @@ function LandingApp() {
       {activeLandingView === 'solutions' && (
       <>
       <section className="operating-section">
-        <div className="operating-visual" aria-label="Mockup de operaciones">
+        <div className="operating-visual" aria-label="Vista simulada de operaciones">
           <div className="ops-sidebar">
-            <strong>Insight OS</strong>
-            <span>Inbox</span>
-            <span>Risks</span>
-            <span>Topics</span>
-            <span>Automations</span>
+            <strong>Sistema de insights</strong>
+            <span>Bandeja</span>
+            <span>Riesgos</span>
+            <span>Temas</span>
+            <span>Automatizaciones</span>
           </div>
           <div className="ops-main">
             <div className="ops-header">
-              <span>Live topic map</span>
-              <strong>Product mock</strong>
+              <span>Mapa de temas activo</span>
+              <strong>Vista de producto</strong>
             </div>
             <div className="topic-list">
               {insights.topTopics.map((topic, index) => (
@@ -957,11 +1127,11 @@ function LandingApp() {
         <div className="operating-copy">
           <p className="eyebrow">Soluciones</p>
           <h2>Una lectura clara para cada equipo.</h2>
-          <p>El mismo feedback, traducido al lenguaje de producto, soporte y revenue.</p>
+          <p>Las mismas opiniones, traducidas al lenguaje de producto, soporte e ingresos.</p>
           <dl className="stat-list">
             <div>
               <dt>{insights.totals.highSeverity}</dt>
-              <dd>senales de severidad alta</dd>
+              <dd>señales de severidad alta</dd>
             </div>
             <div>
               <dt>{insights.totals.avgImpactScore}%</dt>
@@ -1002,8 +1172,8 @@ function LandingApp() {
       <>
       <section className="demo-section" id="demo">
         <div className="section-copy">
-          <p className="eyebrow">Demostracion visual</p>
-          <h2>Prueba una opinion y mira la decision sugerida.</h2>
+          <p className="eyebrow">Demostración visual</p>
+          <h2>Prueba una opinión y mira la decisión sugerida.</h2>
           <p>La demo es temporal; el producto privado guarda historial real.</p>
         </div>
 
@@ -1014,15 +1184,15 @@ function LandingApp() {
                 Canal
                 <select value={channel} onChange={(event) => setChannel(event.target.value)}>
                   {channelOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                    <option key={option} value={option}>{formatChannel(option)}</option>
                   ))}
                 </select>
               </label>
               <label>
-                Area
+                Área
                 <select value={productArea} onChange={(event) => setProductArea(event.target.value)}>
                   {areaOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                    <option key={option} value={option}>{formatArea(option)}</option>
                   ))}
                 </select>
               </label>
@@ -1037,7 +1207,7 @@ function LandingApp() {
               </label>
             </div>
 
-            <label className="input-label" htmlFor="review-text">Feedback del cliente</label>
+            <label className="input-label" htmlFor="review-text">Opinión del cliente</label>
             <textarea
               id="review-text"
               maxLength={MAX_TEXT_LENGTH}
@@ -1047,7 +1217,7 @@ function LandingApp() {
               aria-describedby="review-help review-count"
             />
             <div className="input-meta">
-              <span id="review-help">Ideal para encuestas, tickets, reviews publicas y notas de ventas.</span>
+              <span id="review-help">Ideal para encuestas, tickets, reseñas públicas y notas de ventas.</span>
               <span id="review-count">{normalizedText.length}/{MAX_TEXT_LENGTH}</span>
             </div>
 
@@ -1055,7 +1225,7 @@ function LandingApp() {
 
             <div className="form-actions">
               <button className="primary-button" type="submit" disabled={loading || !normalizedText}>
-                {loading ? 'Analizando...' : 'Generar decision'}
+                {loading ? 'Analizando...' : 'Generar decisión'}
               </button>
               <button className="ghost-button" type="button" onClick={loadExample}>
                 Cargar caso critico
@@ -1073,8 +1243,8 @@ function LandingApp() {
             </div>
 
             <div className="decision-box">
-              <span>Decision sugerida</span>
-              <p>{analysis ? sentiment.decision : 'Esperando feedback para priorizar.'}</p>
+              <span>Decisión sugerida</span>
+              <p>{analysis ? sentiment.decision : 'Esperando opiniones para priorizar.'}</p>
             </div>
 
             <p>{activeSummary}</p>
@@ -1113,14 +1283,14 @@ function LandingApp() {
             </div>
 
             <div className="action-box">
-              <span>Proxima accion</span>
+              <span>Próxima acción</span>
               <p>{activeRecommendation}</p>
             </div>
 
             <div className="result-meta">
               <span>Confianza: {confidencePercent != null ? `${confidencePercent}%` : 'sin dato'}</span>
               <span>Riesgo: {formatRisk(analysis?.churn_risk)}</span>
-              <span>Motor: {analysis?.source === 'gemini' ? 'Gemini LLM' : analysis?.source || 'en espera'}</span>
+              <span>Motor: {analysis ? 'IA aplicada' : 'en espera'}</span>
             </div>
           </aside>
         </div>
@@ -1130,15 +1300,15 @@ function LandingApp() {
       <section className="signal-section compact" id="signals">
         <div className="signal-copy">
           <p className="eyebrow">Historial demo</p>
-          <h2>Resultados temporales de esta sesion.</h2>
+          <h2>Resultados temporales de esta sesión.</h2>
           <p>Sirve para comparar pruebas sin mezclar datos reales.</p>
         </div>
 
         <div className="signal-grid">
           <aside className="signal-summary">
-            <span className="live-pill cache">Cache temporal</span>
+            <span className="live-pill cache">Caché temporal</span>
             <strong>{recentReviews.length}</strong>
-            <p>senales de demo guardadas solo en este navegador por 30 minutos.</p>
+            <p>señales de demo guardadas solo en este navegador por 30 minutos.</p>
 
             <dl>
               <div>
@@ -1147,11 +1317,11 @@ function LandingApp() {
               </div>
               <div>
                 <dt>{latestSignal?.analysis?.label || 'Sin dato'}</dt>
-                <dd>ultima clasificacion</dd>
+                <dd>última clasificación</dd>
               </div>
               <div>
-                <dt>{latestSignal?.product_area || 'general'}</dt>
-                <dd>area mas reciente</dd>
+                <dt>{formatArea(latestSignal?.product_area)}</dt>
+                <dd>área más reciente</dd>
               </div>
             </dl>
 
@@ -1164,7 +1334,7 @@ function LandingApp() {
             {recentReviews.length === 0 && (
               <article className="signal-card empty">
                 <span>Sin historial de demo</span>
-                <p>Analiza una opinion para crear una senal temporal. No se va a guardar en D1.</p>
+                <p>Analiza una opinión para crear una señal temporal. No se va a guardar en el historial privado.</p>
               </article>
             )}
 
@@ -1177,7 +1347,7 @@ function LandingApp() {
                   <div className="signal-card-header">
                     <div>
                       <span>{review.analysis?.label || 'Sin clasificar'}</span>
-                      <strong>{review.product_area || 'general'}</strong>
+                      <strong>{formatArea(review.product_area)}</strong>
                     </div>
                     <time dateTime={review.created_at}>{formatRelativeTime(review.created_at)}</time>
                   </div>
@@ -1185,7 +1355,7 @@ function LandingApp() {
                   <p>{review.analysis?.summary || review.original_text}</p>
 
                   <div className="signal-meta">
-                    <span>{review.channel || 'manual'}</span>
+                    <span>{formatChannel(review.channel || 'manual')}</span>
                     <span>{review.customer_ref || 'sin cliente'}</span>
                     <span>Riesgo {formatRisk(review.analysis?.churn_risk)}</span>
                   </div>
@@ -1212,7 +1382,7 @@ function LandingApp() {
       <section className="pricing-section" id="pricing">
         <div className="section-copy narrow">
           <p className="eyebrow">Precios</p>
-          <h2>Empieza chico. Escala cuando el feedback lo justifique.</h2>
+          <h2>Empieza chico. Escala cuando las opiniones lo justifiquen.</h2>
         </div>
 
         <div className="pricing-grid">
@@ -1233,7 +1403,7 @@ function LandingApp() {
                   navigateLanding(landingViews.find((view) => view.id === 'demo'))
                 }}
               >
-                {plan.featured ? 'Validar Growth' : 'Explorar'}
+                {plan.featured ? 'Validar crecimiento' : 'Explorar'}
               </a>
             </article>
           ))}
@@ -1243,7 +1413,7 @@ function LandingApp() {
       <section className="final-cta">
         <p className="eyebrow">InsightPulse</p>
         <h2>Convierte opiniones en prioridades esta semana.</h2>
-        <p>Prueba el analizador y valida si tus clientes estan avisando algo importante.</p>
+        <p>Prueba el analizador y valida si tus clientes están avisando algo importante.</p>
         <a
           className="primary-link"
           href="#demo"
@@ -1261,36 +1431,89 @@ function LandingApp() {
       {activeLandingView === 'faq' && (
       <section className="faq-section" id="faq">
         <div className="section-copy narrow">
-          <p className="eyebrow">FAQ</p>
+          <p className="eyebrow">Preguntas frecuentes</p>
           <h2>Preguntas antes de probar.</h2>
         </div>
 
         <div className="faq-grid">
           <article>
             <strong>¿Puedo subir CSV?</strong>
-            <p>Si. El panel privado ya permite cargar CSV, elegir columna y procesar lotes controlados.</p>
+            <p>Sí. El panel privado ya permite cargar CSV, elegir columna y procesar lotes controlados.</p>
           </article>
           <article>
             <strong>¿La demo guarda mis datos?</strong>
-            <p>No. La demo usa cache temporal del navegador. El historial real vive solo en cuentas autenticadas.</p>
+            <p>No. La demo usa caché temporal del navegador. El historial real vive solo en cuentas autenticadas.</p>
           </article>
           <article>
-            <strong>¿Que pasa con los limites de IA?</strong>
-            <p>El dashboard mide intentos, errores 429, tokens y latencia para cuidar consumo y costos.</p>
+            <strong>¿Qué pasa con los límites de IA?</strong>
+            <p>El panel mide intentos, errores 429, tokens y latencia para cuidar consumo y costos.</p>
           </article>
           <article>
             <strong>¿Se puede cancelar?</strong>
-            <p>La idea del plan inicial es simple: suscripcion mensual, sin contratos largos ni setup complejo.</p>
+            <p>La idea del plan inicial es simple: suscripción mensual, sin contratos largos ni configuración compleja.</p>
           </article>
         </div>
       </section>
       )}
       </div>
 
-      <footer className="site-footer">
-        <strong>InsightPulse</strong>
-        <span>MVP SaaS de inteligencia de feedback</span>
-        <span>Cloudflare + LLM + D1</span>
+      <footer className="site-footer" id="site-footer">
+        <section className="footer-cta" aria-label="Probar InsightPulse">
+          <div>
+            <h2>Empieza a convertir opiniones en decisiones</h2>
+            <p>Sin presión: prueba la demo, entra al panel privado y valida si tus clientes ya están marcando prioridades.</p>
+          </div>
+          <a className="footer-cta-button" href="/app">Empezar gratis</a>
+        </section>
+
+        <div className="footer-divider"></div>
+
+        <section className="footer-main" aria-label="Mapa del sitio">
+          <div className="footer-brand">
+            <a className="brand footer-logo" href="#top" aria-label="InsightPulse inicio" onClick={() => navigateLanding(landingViews[0])}>
+              <span className="brand-mark" aria-hidden="true">IP</span>
+              <strong>InsightPulse</strong>
+            </a>
+            <p>
+              Producto de TerraData AI Solutions. Nuestra misión es acercar inteligencia artificial práctica a negocios
+              que necesitan convertir datos dispersos en decisiones claras.
+            </p>
+            <p>
+              InsightPulse transforma opiniones de clientes en prioridades accionables para producto, soporte e ingresos.
+            </p>
+            <span>Diseñado para operar con foco, privacidad y decisiones claras.</span>
+          </div>
+
+          <div className="footer-columns">
+            {footerColumns.map((column) => (
+              <div className="footer-column" key={column.title}>
+                <h3>{column.title}</h3>
+                <ul>
+                  {column.links.map((link) => (
+                    <li key={link.label}>
+                      {link.status ? (
+                        <span className="footer-soon">{link.label}<small>{link.status}</small></span>
+                      ) : (
+                        <a
+                          href={link.viewId ? landingViews.find((view) => view.id === link.viewId)?.hash : link.href}
+                          onClick={(event) => handleLandingNav(event, link)}
+                        >
+                          {link.label}
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="footer-bottom">
+          <span>© 2026 InsightPulse</span>
+          <span>Construido para equipos SaaS eficientes</span>
+          <span>Base preparada para privacidad</span>
+        </section>
       </footer>
     </main>
   )
@@ -1566,7 +1789,7 @@ function PrivateApp() {
   const handleExportCsvResults = () => {
     if (!csvResults.length) return
 
-    const headers = ['fila', 'estado', 'sentimiento', 'riesgo', 'impacto', 'resumen', 'accion', 'error']
+    const headers = ['fila', 'estado', 'sentimiento', 'riesgo', 'impacto', 'resumen', 'acción', 'error']
     const rows = csvResults.map((item) => [
       item.rowNumber,
       item.ok ? 'ok' : 'error',
@@ -1636,14 +1859,14 @@ function PrivateApp() {
           </a>
 
           <div>
-            <p className="eyebrow">Workspace privado</p>
+            <p className="eyebrow">Espacio de trabajo privado</p>
             <h1 id="login-title">Ingresar al panel</h1>
-            <p>Accede con tu email y contrasena para operar feedback real dentro de tu workspace.</p>
+            <p>Accede con tu correo y contraseña para operar opiniones reales dentro de tu espacio de trabajo.</p>
           </div>
 
           <form className="login-form" onSubmit={handleLogin}>
             <label>
-              Email
+              Correo
               <input
                 type="email"
                 value={email}
@@ -1654,12 +1877,12 @@ function PrivateApp() {
               />
             </label>
             <label>
-              Contrasena
+              Contraseña
               <input
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Tu contrasena"
+                placeholder="Tu contraseña"
                 autoComplete="current-password"
                 required
               />
@@ -1672,7 +1895,7 @@ function PrivateApp() {
             </button>
           </form>
 
-          <a className="secondary-link" href="/">Volver a la landing</a>
+          <a className="secondary-link" href="/">Volver al sitio</a>
         </section>
       </main>
     )
@@ -1687,13 +1910,13 @@ function PrivateApp() {
   const remainingAnalyses = monthlyLimit ? Math.max(0, monthlyLimit - usage) : null
   const csvWillUse = csvRowsToProcess.length
   const csvLimitWarning = remainingAnalyses !== null && csvWillUse > remainingAnalyses
-    ? `Este lote intenta procesar ${csvWillUse} filas y quedan ${remainingAnalyses} analisis del plan. El backend bloqueara lo que exceda el limite.`
+    ? `Este lote intenta procesar ${csvWillUse} filas y quedan ${remainingAnalyses} análisis del plan. El servidor bloqueará lo que exceda el límite.`
     : ''
 
   return (
     <main className="private-shell">
       <aside className="app-sidebar">
-        <a className="brand" href="/" aria-label="InsightPulse landing">
+        <a className="brand" href="/" aria-label="Sitio de InsightPulse">
           <span className="brand-mark" aria-hidden="true">IP</span>
           <strong>InsightPulse</strong>
         </a>
@@ -1719,13 +1942,13 @@ function PrivateApp() {
       <section className="app-main">
         <header className="app-header" id="overview">
           <div>
-            <p className="eyebrow">Workspace privado</p>
+            <p className="eyebrow">Espacio de trabajo privado</p>
             <h1>{workspace.name}</h1>
-            <p>Plan {workspace.plan} activo. Este panel ya opera contra datos persistentes del workspace.</p>
+            <p>Plan {formatPlan(workspace.plan)} activo. Este panel ya opera contra datos persistentes del espacio de trabajo.</p>
           </div>
           <div className="workspace-badge">
-            <span>Analisis del mes</span>
-            <strong>{usage}/{monthlyLimit || 'sin limite'}</strong>
+            <span>Análisis del mes</span>
+            <strong>{usage}/{monthlyLimit || 'sin límite'}</strong>
           </div>
         </header>
 
@@ -1734,7 +1957,7 @@ function PrivateApp() {
         <div className="app-view-shell" data-view={activeAppView}>
         {activeAppView === 'overview' && (
         <>
-        <section className="app-metrics" aria-label="Metricas del workspace">
+        <section className="app-metrics" aria-label="Métricas del espacio de trabajo">
           <article>
             <span>Total</span>
             <strong>{appInsights.totals?.total || 0}</strong>
@@ -1743,7 +1966,7 @@ function PrivateApp() {
           <article>
             <span>Riesgo alto</span>
             <strong>{appInsights.totals?.highChurnRisk || 0}</strong>
-            <p>senales a revisar</p>
+            <p>señales a revisar</p>
           </article>
           <article>
             <span>Impacto promedio</span>
@@ -1753,16 +1976,16 @@ function PrivateApp() {
           <article>
             <span>Uso del plan</span>
             <strong>{usagePercent}%</strong>
-            <p>del limite mensual</p>
+            <p>del límite mensual</p>
           </article>
         </section>
 
-        <section className="business-dashboard" aria-label="Lectura ejecutiva del workspace">
+        <section className="business-dashboard" aria-label="Lectura ejecutiva del espacio de trabajo">
           <article className="executive-panel">
             <div>
               <p className="eyebrow">Lectura ejecutiva</p>
               <h2>Lo que dicen los clientes ahora</h2>
-              <p>{appInsights.executiveSummary || 'Todavia no hay suficientes opiniones para construir una lectura ejecutiva.'}</p>
+              <p>{appInsights.executiveSummary || 'Todavía no hay suficientes opiniones para construir una lectura ejecutiva.'}</p>
             </div>
             <button type="button" className="ghost-button" onClick={handleExportWorkspaceReport}>
               Exportar reporte
@@ -1773,7 +1996,7 @@ function PrivateApp() {
             <article>
               <span>Sentimiento</span>
               <div className="business-list">
-                {(appInsights.bySentiment || []).length === 0 && <p>Sin distribucion todavia.</p>}
+                {(appInsights.bySentiment || []).length === 0 && <p>Sin distribución todavía.</p>}
                 {(appInsights.bySentiment || []).map((item) => (
                   <div className="business-row" key={item.label}>
                     <strong>{item.label}</strong>
@@ -1784,9 +2007,9 @@ function PrivateApp() {
             </article>
 
             <article>
-              <span>Areas criticas</span>
+              <span>Áreas críticas</span>
               <div className="business-list">
-                {(appInsights.byArea || []).length === 0 && <p>Sin areas detectadas.</p>}
+                {(appInsights.byArea || []).length === 0 && <p>Sin áreas detectadas.</p>}
                 {(appInsights.byArea || []).slice(0, 4).map((area) => (
                   <div className="business-row" key={area.label}>
                     <strong>{area.label}</strong>
@@ -1799,7 +2022,7 @@ function PrivateApp() {
             <article>
               <span>Temas repetidos</span>
               <div className="business-tags">
-                {(appInsights.topTopics || []).length === 0 && <p>Sin temas todavia.</p>}
+                {(appInsights.topTopics || []).length === 0 && <p>Sin temas todavía.</p>}
                 {(appInsights.topTopics || []).slice(0, 6).map((topic) => (
                   <mark key={`${topic.topic}-${topic.topic_type || 'topic'}`}>
                     {topic.topic} · {formatNumber(topic.count)}
@@ -1813,7 +2036,7 @@ function PrivateApp() {
             <div className="card-heading horizontal">
               <div>
                 <p className="eyebrow">Prioridades</p>
-                <h2>Feedback que merece atencion primero</h2>
+                <h2>Opiniones que merecen atención primero</h2>
               </div>
               <button type="button" className="ghost-button" onClick={() => navigateApp(appViews.find((view) => view.id === 'history'))}>
                 Ver historial
@@ -1822,12 +2045,12 @@ function PrivateApp() {
 
             <div className="priority-list">
               {(appInsights.priority || []).length === 0 && (
-                <p className="empty-copy">Cuando haya feedback con riesgo o impacto alto, aparecera en esta lista.</p>
+                <p className="empty-copy">Cuando haya opiniones con riesgo o impacto alto, aparecerán en esta lista.</p>
               )}
               {(appInsights.priority || []).slice(0, 3).map((review) => (
                 <div className="priority-item" key={review.id}>
                   <div>
-                    <strong>{review.product_area || 'general'}</strong>
+                    <strong>{formatArea(review.product_area)}</strong>
                     <span>{review.analysis?.label || 'Sin dato'} · Riesgo {formatRisk(review.analysis?.churn_risk)}</span>
                   </div>
                   <p>{getReviewSummary(review)}</p>
@@ -1838,7 +2061,7 @@ function PrivateApp() {
           </article>
         </section>
 
-        <section className="workspace-module-grid" aria-label="Modulos del workspace">
+        <section className="workspace-module-grid" aria-label="Módulos del espacio de trabajo">
           {appViews.slice(1).map((view) => (
             <button
               key={view.id}
@@ -1850,13 +2073,13 @@ function PrivateApp() {
                 {view.id === 'usage' && 'Controlar consumo'}
                 {view.id === 'csv' && 'Cargar lote'}
                 {view.id === 'analysis' && 'Analizar manual'}
-                {view.id === 'history' && 'Revisar senales'}
+                {view.id === 'history' && 'Revisar señales'}
               </strong>
               <p>
                 {view.id === 'usage' && 'Cuota, fallos, latencia y tokens registrados.'}
                 {view.id === 'csv' && 'Procesamiento controlado para archivos simples.'}
-                {view.id === 'analysis' && 'Carga puntual de feedback real del cliente.'}
-                {view.id === 'history' && 'Feedback persistido y clasificado por el motor.'}
+                {view.id === 'analysis' && 'Carga puntual de opiniones reales del cliente.'}
+                {view.id === 'history' && 'Opiniones guardadas y clasificadas por el motor.'}
               </p>
             </button>
           ))}
@@ -1870,14 +2093,14 @@ function PrivateApp() {
             <div>
               <p className="eyebrow">Uso y salud</p>
               <h2>Consumo operativo</h2>
-              <p>Monitoreo de intentos reales de LLM en los ultimos 7 dias para cuidar cuota, costos y estabilidad.</p>
+              <p>Monitoreo de intentos reales de LLM en los últimos 7 días para cuidar cuota, costos y estabilidad.</p>
             </div>
             <button type="button" className="ghost-button" onClick={() => loadPrivateData(session)} disabled={appLoading}>
               {appLoading ? 'Actualizando...' : 'Actualizar'}
             </button>
           </div>
 
-          <div className="usage-grid" aria-label="Metricas de uso del LLM">
+          <div className="usage-grid" aria-label="Métricas de uso del LLM">
             <article>
               <span>Intentos</span>
               <strong>{formatNumber(usageTotals.total)}</strong>
@@ -1886,10 +2109,10 @@ function PrivateApp() {
             <article>
               <span>Fallos</span>
               <strong>{formatNumber(usageTotals.failed)}</strong>
-              <p>{formatNumber(provider429)} por limite 429</p>
+              <p>{formatNumber(provider429)} por límite 429</p>
             </article>
             <article>
-              <span>Exito</span>
+              <span>Éxito</span>
               <strong>{usageTotals.successRate || 0}%</strong>
               <p>en ventana monitoreada</p>
             </article>
@@ -1901,7 +2124,7 @@ function PrivateApp() {
             <article>
               <span>Tokens</span>
               <strong>{formatNumber(usageTotals.totalTokens)}</strong>
-              <p>{formatNumber(usageTotals.promptTokens)} input / {formatNumber(usageTotals.completionTokens)} output</p>
+              <p>{formatNumber(usageTotals.promptTokens)} entrada / {formatNumber(usageTotals.completionTokens)} salida</p>
             </article>
           </div>
 
@@ -1909,7 +2132,7 @@ function PrivateApp() {
             <div>
               <h3>Por flujo</h3>
               <div className="usage-list">
-                {appUsage.byRoute?.length === 0 && <span>Sin eventos todavia</span>}
+                {appUsage.byRoute?.length === 0 && <span>Sin eventos todavía</span>}
                 {appUsage.byRoute?.map((item) => (
                   <div className="usage-row" key={item.label}>
                     <span>{item.label === 'private_review' ? 'Producto' : 'Demo'}</span>
@@ -1942,7 +2165,7 @@ function PrivateApp() {
             <div>
               <p className="eyebrow">Carga por archivo</p>
               <h2>Analizar CSV</h2>
-              <p>Procesa lotes chicos desde el workspace privado y guarda los resultados reales en el historial.</p>
+              <p>Procesa lotes chicos desde el espacio privado y guarda los resultados reales en el historial.</p>
             </div>
             <div className="csv-limit-badge">
               <span>Lote MVP</span>
@@ -1965,7 +2188,7 @@ function PrivateApp() {
 
             <div className="csv-controls">
               <label>
-                Columna de feedback
+                Columna de opinión
                 <select
                   value={csvColumn}
                   onChange={(event) => setCsvColumn(event.target.value)}
@@ -2011,11 +2234,11 @@ function PrivateApp() {
               </div>
               <div>
                 <span>Disponibles del plan</span>
-                <strong>{remainingAnalyses ?? 'sin limite'}</strong>
+                <strong>{remainingAnalyses ?? 'sin límite'}</strong>
               </div>
               <div>
-                <span>Proteccion</span>
-                <strong>limite servidor</strong>
+                <span>Protección</span>
+                <strong>límite servidor</strong>
               </div>
             </div>
           )}
@@ -2023,7 +2246,7 @@ function PrivateApp() {
           {csvPreviewRows.length > 0 && (
             <div className="csv-preview">
               <div className="csv-preview-header">
-                <strong>Preview</strong>
+                <strong>Vista previa</strong>
                 <span>{csvRowsWithText.length} filas con texto detectado</span>
               </div>
               <div className="csv-table-wrap">
@@ -2106,9 +2329,9 @@ function PrivateApp() {
         <section className="app-grid">
           <form className="private-card" id="manual-analysis" onSubmit={handlePrivateAnalyze}>
             <div className="card-heading">
-              <p className="eyebrow">Analisis manual</p>
-              <h2>Cargar feedback real</h2>
-              <p>Esto persiste en D1 y queda asociado a tu workspace.</p>
+              <p className="eyebrow">Análisis manual</p>
+              <h2>Cargar opinión real</h2>
+              <p>Esto queda guardado y asociado a tu espacio de trabajo.</p>
             </div>
 
             <div className="context-grid">
@@ -2116,15 +2339,15 @@ function PrivateApp() {
                 Canal
                 <select value={appChannel} onChange={(event) => setAppChannel(event.target.value)}>
                   {channelOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                    <option key={option} value={option}>{formatChannel(option)}</option>
                   ))}
                 </select>
               </label>
               <label>
-                Area
+                Área
                 <select value={appProductArea} onChange={(event) => setAppProductArea(event.target.value)}>
                   {areaOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
+                    <option key={option} value={option}>{formatArea(option)}</option>
                   ))}
                 </select>
               </label>
@@ -2139,25 +2362,25 @@ function PrivateApp() {
               </label>
             </div>
 
-            <label className="input-label" htmlFor="private-review">Feedback</label>
+            <label className="input-label" htmlFor="private-review">Opinión del cliente</label>
             <textarea
               id="private-review"
               value={appText}
               onChange={(event) => setAppText(event.target.value)}
               maxLength={MAX_TEXT_LENGTH}
-              placeholder="Pega aqui una opinion real de cliente..."
+              placeholder="Pega aquí una opinión real de cliente..."
             />
 
             <button className="primary-button" type="submit" disabled={appSubmitting || !appText.trim()}>
-              {appSubmitting ? 'Analizando...' : 'Guardar analisis'}
+              {appSubmitting ? 'Analizando...' : 'Guardar análisis'}
             </button>
           </form>
 
           <aside className="private-card">
             <div className="card-heading">
-              <p className="eyebrow">Ultimo resultado</p>
-              <h2>{appResult?.analysis?.label || 'Sin analisis reciente'}</h2>
-              <p>{appResult?.analysis?.summary || 'Carga feedback real para ver el resultado accionable.'}</p>
+              <p className="eyebrow">Último resultado</p>
+              <h2>{appResult?.analysis?.label || 'Sin análisis reciente'}</h2>
+              <p>{appResult?.analysis?.summary || 'Carga una opinión real para ver el resultado accionable.'}</p>
             </div>
 
             {appResult && (
@@ -2165,10 +2388,10 @@ function PrivateApp() {
                 <div className="result-meta">
                   <span>Riesgo {formatRisk(appResult.analysis.churn_risk)}</span>
                   <span>Impacto {normalizeImpactScore(appResult.analysis.impact_score)}%</span>
-                  <span>{appResult.product_area || 'general'}</span>
+                  <span>{formatArea(appResult.product_area)}</span>
                 </div>
                 <div className="action-box">
-                  <span>Proxima accion</span>
+                  <span>Próxima acción</span>
                   <p>{appResult.analysis.recommended_action}</p>
                 </div>
               </>
@@ -2182,7 +2405,7 @@ function PrivateApp() {
           <div className="card-heading horizontal">
             <div>
               <p className="eyebrow">Historial privado</p>
-              <h2>Feedback persistido</h2>
+              <h2>Opiniones guardadas</h2>
             </div>
             <button type="button" className="ghost-button" onClick={() => loadPrivateData(session)} disabled={appLoading}>
               {appLoading ? 'Actualizando...' : 'Actualizar'}
@@ -2192,8 +2415,8 @@ function PrivateApp() {
           <div className="private-history">
             {appReviews.length === 0 && (
               <article className="signal-card empty">
-                <span>Sin opiniones reales todavia</span>
-                <p>El primer analisis manual aparecera aca y quedara asociado a este workspace.</p>
+                <span>Sin opiniones reales todavía</span>
+                <p>El primer análisis manual aparecerá acá y quedará asociado a este espacio de trabajo.</p>
               </article>
             )}
 
@@ -2202,13 +2425,13 @@ function PrivateApp() {
                 <div className="signal-card-header">
                   <div>
                     <span>{review.analysis.label}</span>
-                    <strong>{review.product_area || 'general'}</strong>
+                    <strong>{formatArea(review.product_area)}</strong>
                   </div>
                   <time dateTime={review.created_at}>{formatRelativeTime(review.created_at)}</time>
                 </div>
                 <p>{review.analysis.summary}</p>
                 <div className="signal-meta">
-                  <span>{review.channel || 'manual'}</span>
+                  <span>{formatChannel(review.channel || 'manual')}</span>
                   <span>{review.customer_ref || 'sin cliente'}</span>
                   <span>Riesgo {formatRisk(review.analysis.churn_risk)}</span>
                 </div>
@@ -2229,15 +2452,15 @@ function PrivateApp() {
         <div className="modal-backdrop" role="presentation">
           <section className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="delete-review-title">
             <div>
-              <p className="eyebrow">Accion irreversible</p>
-              <h2 id="delete-review-title">Eliminar feedback del historial</h2>
+              <p className="eyebrow">Acción irreversible</p>
+              <h2 id="delete-review-title">Eliminar opinión del historial</h2>
               <p>
-                Esta accion no se puede deshacer. Se eliminara el feedback guardado y sus temas asociados; las metricas de uso quedaran solo como auditoria sin texto vinculado.
+                Esta acción no se puede deshacer. Se eliminará la opinión guardada y sus temas asociados; las métricas de uso quedarán solo como auditoría sin texto vinculado.
               </p>
             </div>
 
             <article className="delete-preview">
-              <span>{deleteCandidate.analysis?.label || 'Feedback'}</span>
+              <span>{deleteCandidate.analysis?.label || 'Opinión'}</span>
               <p>{deleteCandidate.analysis?.summary || deleteCandidate.original_text}</p>
             </article>
 
