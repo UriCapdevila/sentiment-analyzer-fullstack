@@ -1,96 +1,110 @@
 # Secciones del sistema
 
+Actualizado al 8 de julio de 2026.
+
 ## Vista general
 
-El proyecto esta organizado en tres carpetas principales:
+El proyecto conserva componentes locales de la primera etapa, pero el producto principal ya esta orientado a Cloudflare.
+
+Arquitectura principal actual:
 
 ```text
-frontend
-backend
-ai-service
+Frontend React
+  -> Cloudflare Pages
+  -> Cloudflare Worker API
+  -> Cloudflare AI Gateway
+  -> Google Gemini
+  -> Cloudflare D1
 ```
 
-Cada una tiene una responsabilidad distinta.
+## `frontend`
 
-## Frontend
+Es la interfaz del producto.
 
-Carpeta: `frontend`
+Incluye dos experiencias:
 
-Es la parte que ve el usuario. Incluye la pantalla donde se escribe la resena y donde se muestra el resultado.
+- landing publica
+- panel privado SaaS
 
-### Que hace
+Funciones principales:
 
-- muestra el formulario de texto
-- evita enviar texto vacio
-- manda el texto al backend
-- muestra mensajes de error
-- muestra el resultado del analisis
+- navegacion por secciones
+- demo publica
+- login
+- dashboard privado
+- analisis manual
+- carga de CSV
+- vista de uso y salud
+- historial privado
+- eliminacion de feedback con confirmacion
 
-### Que mejoramos
+URL productiva actual:
 
-Antes el frontend llamaba siempre a `http://localhost:3000`. Ahora usa una variable llamada `VITE_API_URL`.
+```text
+https://insightpulse-web.pages.dev
+```
 
-Eso significa que la misma app puede funcionar en:
+## `cloudflare-worker`
 
-- desarrollo local
-- servidor de pruebas
-- produccion
+Es la API principal del MVP cloud.
 
-sin cambiar codigo interno.
+Responsabilidades:
 
-## Backend
+- recibir solicitudes del frontend
+- autenticar usuarios
+- separar demo de producto real
+- llamar a Gemini mediante AI Gateway
+- guardar feedback en D1
+- listar historial
+- eliminar feedback
+- calcular insights
+- registrar metricas de uso
+- responder errores de forma consistente
 
-Carpeta: `backend`
+Endpoints principales:
 
-Es la puerta de entrada de la aplicacion. No hace el analisis de IA directamente; coordina la comunicacion entre la pantalla y el servicio de IA.
+- `GET /health`
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/me`
+- `POST /api/demo/review`
+- `POST /api/review`
+- `GET /api/reviews`
+- `DELETE /api/reviews/:id`
+- `GET /api/insights`
+- `GET /api/usage`
 
-### Que hace
+URL productiva actual:
 
-- recibe la resena desde el frontend
-- revisa que el texto sea valido
-- limita el tamano del texto
-- llama al servicio de IA
-- devuelve el resultado al frontend
-- devuelve errores claros si algo falla
+```text
+https://insightpulse-api.uricapdevil4.workers.dev
+```
 
-### Por que es importante
+## `backend`
 
-El backend permite que el frontend no tenga que conocer detalles internos del sistema de IA. Tambien es el lugar correcto para agregar en el futuro:
+Es el backend Node/Express de la primera version local.
 
-- usuarios
-- historial
-- permisos
-- limites de uso
-- metricas
-- logs
-- integracion con base de datos
+Hoy queda como referencia o laboratorio, no como camino principal del SaaS. Puede servir para comparar enfoques o rescatar logica, pero el foco actual esta en Cloudflare Worker.
 
-## Servicio de IA
+## `ai-service`
 
-Carpeta: `ai-service`
+Es el microservicio FastAPI/TextBlob original.
 
-Es el motor que analiza el texto. Esta hecho con FastAPI y TextBlob.
+Tambien queda como pieza de laboratorio. Fue util para validar el concepto inicial, pero el producto actual usa Gemini porque interpreta mejor contexto, idioma, severidad e intencion.
 
-### Que hace
+## `documentacion`
 
-- recibe texto
-- calcula sentimiento
-- calcula subjetividad
-- extrae palabras clave
-- devuelve una respuesta estructurada
+Es la carpeta de decision y contexto.
 
-### Limitacion actual
+Su objetivo no es documentar cada linea de codigo, sino explicar:
 
-TextBlob es una buena primera version, pero no es el mejor motor para espanol ni para analisis avanzado. Sirve para demostrar el flujo, pero el producto ganaria mucho con un modelo multilenguaje o una capa de IA mas potente.
+- que problema resuelve el producto
+- que esta construido
+- que falta
+- como se despliega
+- que riesgos y oportunidades existen
 
-## Documentacion
+## `imagenes`
 
-Carpeta: `documentacion`
+Guarda recursos visuales usados por el README o por documentacion.
 
-Es esta carpeta. Su objetivo es explicar el proyecto desde el punto de vista funcional y de producto, no desde el codigo.
-
-## Imagenes
-
-Carpeta: `imagenes`
-
-Guarda recursos visuales usados por el README, como la captura de pantalla de la demo.

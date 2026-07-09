@@ -1549,6 +1549,144 @@ pre {
   line-height: 0.95;
 }
 
+.business-dashboard {
+  display: grid;
+  gap: 14px;
+}
+
+.executive-panel,
+.priority-panel,
+.business-grid article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.executive-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: clamp(18px, 3vw, 28px);
+  background:
+    linear-gradient(135deg, rgba(8, 17, 31, 0.04), rgba(238, 244, 255, 0.74) 48%, rgba(255, 255, 255, 0.98));
+}
+
+.executive-panel h2,
+.priority-panel h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.45rem, 3vw, 2.4rem);
+  line-height: 1;
+}
+
+.executive-panel p:not(.eyebrow),
+.priority-item p,
+.priority-item small,
+.business-list p,
+.business-tags p,
+.empty-copy {
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.business-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.business-grid article,
+.priority-panel {
+  padding: 18px;
+}
+
+.business-grid article > span {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.business-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.business-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 9px;
+}
+
+.business-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.business-row strong {
+  color: var(--ink);
+}
+
+.business-row span {
+  color: var(--ink-muted);
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.business-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.priority-list {
+  display: grid;
+  gap: 10px;
+}
+
+.priority-item {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--amber);
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfdff;
+}
+
+.priority-item div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.priority-item strong {
+  color: var(--ink);
+}
+
+.priority-item span {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.priority-item p {
+  margin: 0;
+}
+
+.priority-item small {
+  display: block;
+  font-weight: 800;
+}
+
 .workspace-module-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1810,6 +1948,38 @@ pre {
   font-weight: 800;
 }
 
+.csv-run-plan,
+.csv-batch-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.csv-run-plan div,
+.csv-batch-summary article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.csv-run-plan span,
+.csv-batch-summary span {
+  color: var(--ink-muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.csv-run-plan strong,
+.csv-batch-summary strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  font-size: 1.1rem;
+}
+
 .csv-preview,
 .csv-results {
   margin-top: 18px;
@@ -2042,6 +2212,9 @@ a:focus-visible {
   .app-grid,
   .csv-layout,
   .csv-result-grid,
+  .csv-run-plan,
+  .csv-batch-summary,
+  .business-grid,
   .usage-grid,
   .usage-detail-grid,
   .developer-section {
@@ -2199,6 +2372,8 @@ a:focus-visible {
   .result-header,
   .signal-card-header,
   .app-header,
+  .executive-panel,
+  .priority-item div,
   .csv-actions,
   .csv-preview-header,
   .card-heading.horizontal,

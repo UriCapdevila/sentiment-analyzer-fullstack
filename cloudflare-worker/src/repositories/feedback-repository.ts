@@ -118,6 +118,31 @@ export async function selectReviews(db: D1Database, options: ListReviewsOptions)
   return result.results || [];
 }
 
+export async function selectDuplicateReview(db: D1Database, workspaceId: string, input: ReviewInput): Promise<ReviewRecord | null> {
+  const result = await db
+    .prepare(
+      `SELECT *
+       FROM feedback_reviews
+       WHERE workspace_id = ?
+         AND original_text = ?
+         AND COALESCE(channel, '') = ?
+         AND COALESCE(customer_ref, '') = ?
+         AND COALESCE(product_area, '') = ?
+       ORDER BY created_at DESC
+       LIMIT 1`,
+    )
+    .bind(
+      workspaceId,
+      input.text,
+      input.channel || '',
+      input.customerRef || '',
+      input.productArea || '',
+    )
+    .first<ReviewRecord>();
+
+  return result || null;
+}
+
 export async function deleteReviewById(db: D1Database, workspaceId: string, reviewId: string): Promise<boolean> {
   const existingReview = await db
     .prepare(
@@ -163,9 +188,13 @@ export async function countReviewsSince(db: D1Database, workspaceId: string, sin
 export async function selectInsights(db: D1Database, workspaceId: string, sinceIso: string): Promise<{
   totals: Record<string, number>;
   topics: Array<{ topic: string; topic_type: string; count: number }>;
+  byArea: Array<{ label: string | null; total: number; high_churn_risk: number; avg_impact_score: number }>;
+  byChannel: Array<{ label: string | null; total: number; negative: number; mixed: number }>;
+  bySentiment: Array<{ label: string; total: number }>;
+  priority: ReviewRecord[];
   recent: ReviewRecord[];
 }> {
-  const [totals, topics, recent] = await Promise.all([
+  const [totals, topics, byArea, byChannel, bySentiment, priority, recent] = await Promise.all([
     db
       .prepare(
         `SELECT
@@ -194,6 +223,59 @@ export async function selectInsights(db: D1Database, workspaceId: string, sinceI
       .all<{ topic: string; topic_type: string; count: number }>(),
     db
       .prepare(
+        `SELECT
+          COALESCE(fr.product_area, 'general') AS label,
+          COUNT(*) AS total,
+          SUM(CASE WHEN fr.churn_risk = 'high' THEN 1 ELSE 0 END) AS high_churn_risk,
+          AVG(fr.impact_score) AS avg_impact_score
+         FROM feedback_reviews fr
+         WHERE fr.workspace_id = ? AND fr.created_at >= ?
+         GROUP BY COALESCE(fr.product_area, 'general')
+         ORDER BY high_churn_risk DESC, avg_impact_score DESC, total DESC
+         LIMIT 8`,
+      )
+      .bind(workspaceId, sinceIso)
+      .all<{ label: string | null; total: number; high_churn_risk: number; avg_impact_score: number }>(),
+    db
+      .prepare(
+        `SELECT
+          COALESCE(fr.channel, 'manual') AS label,
+          COUNT(*) AS total,
+          SUM(CASE WHEN fr.label = 'Negativo' THEN 1 ELSE 0 END) AS negative,
+          SUM(CASE WHEN fr.label = 'Mixto' THEN 1 ELSE 0 END) AS mixed
+         FROM feedback_reviews fr
+         WHERE fr.workspace_id = ? AND fr.created_at >= ?
+         GROUP BY COALESCE(fr.channel, 'manual')
+         ORDER BY total DESC
+         LIMIT 8`,
+      )
+      .bind(workspaceId, sinceIso)
+      .all<{ label: string | null; total: number; negative: number; mixed: number }>(),
+    db
+      .prepare(
+        `SELECT label, COUNT(*) AS total
+         FROM feedback_reviews
+         WHERE workspace_id = ? AND created_at >= ?
+         GROUP BY label
+         ORDER BY total DESC`,
+      )
+      .bind(workspaceId, sinceIso)
+      .all<{ label: string; total: number }>(),
+    db
+      .prepare(
+        `SELECT *
+         FROM feedback_reviews
+         WHERE workspace_id = ? AND created_at >= ?
+         ORDER BY
+          CASE WHEN churn_risk = 'high' THEN 0 WHEN severity = 'high' THEN 1 ELSE 2 END,
+          impact_score DESC,
+          created_at DESC
+         LIMIT 5`,
+      )
+      .bind(workspaceId, sinceIso)
+      .all<ReviewRecord>(),
+    db
+      .prepare(
         `SELECT *
          FROM feedback_reviews
          WHERE workspace_id = ? AND created_at >= ?
@@ -207,6 +289,10 @@ export async function selectInsights(db: D1Database, workspaceId: string, sinceI
   return {
     totals: totals || {},
     topics: topics.results || [],
+    byArea: byArea.results || [],
+    byChannel: byChannel.results || [],
+    bySentiment: bySentiment.results || [],
+    priority: priority.results || [],
     recent: recent.results || [],
   };
 }

@@ -1,82 +1,96 @@
 # Como funciona la solucion
 
+Actualizado al 8 de julio de 2026.
+
 ## Explicacion simple
 
-La aplicacion esta dividida en tres partes que trabajan juntas.
+InsightPulse recibe una opinion de cliente, la envia a un modelo de IA y devuelve una lectura estructurada para negocio.
 
-1. El usuario escribe una resena en la pantalla.
-2. La pantalla envia esa resena al backend.
-3. El backend revisa que el texto sea valido y se lo manda al servicio de IA.
-4. El servicio de IA analiza el texto y devuelve un resultado.
-5. El backend le devuelve ese resultado a la pantalla.
-6. La pantalla muestra el veredicto con colores y datos simples.
+El resultado no se limita a "positivo" o "negativo". Tambien intenta detectar:
 
-## Recorrido de una resena
+- resumen ejecutivo
+- temas principales
+- severidad
+- riesgo de abandono
+- impacto estimado
+- accion recomendada
+- categorias del problema
+
+## Dos recorridos distintos
+
+### Demo publica
+
+La demo de la landing sirve para probar el valor del producto sin llenar la base de datos con pruebas.
+
+Recorrido:
 
 ```text
-Usuario
-  -> Frontend
-  -> Backend
-  -> Servicio de IA
-  -> Backend
-  -> Frontend
-  -> Resultado visual
+Visitante
+  -> Landing en Cloudflare Pages
+  -> Worker: /api/demo/review
+  -> Gemini via AI Gateway
+  -> Respuesta visual
+  -> Historial temporal en el navegador
 ```
 
-## Que hace cada paso
+Caracteristicas:
 
-### 1. El usuario escribe
+- no requiere login
+- no guarda el feedback en D1
+- conserva un historial temporal en cache del navegador
+- el historial se borra solo despues de un tiempo
+- sirve para ventas, demostraciones y pruebas livianas
 
-La persona escribe una resena o comentario. Por ahora el analisis funciona mejor en ingles porque el motor actual usa TextBlob, una libreria simple orientada principalmente a textos en ingles.
+### Producto privado
 
-### 2. El frontend envia el texto
+El panel privado es el espacio donde se procesan datos reales del cliente.
 
-El frontend es la parte visual. Toma el texto y lo manda al backend usando una direccion configurable.
+Recorrido:
 
-Antes estaba fija en `http://localhost:3000`. Ahora usa `VITE_API_URL`, lo que permite cambiar la direccion cuando se haga deploy o cuando se use otro entorno.
+```text
+Usuario autenticado
+  -> Panel privado /app
+  -> Worker: /api/review
+  -> Gemini via AI Gateway
+  -> D1 guarda el analisis
+  -> Dashboard, historial y metricas
+```
 
-### 3. El backend valida
+Caracteristicas:
 
-El backend funciona como puerta de entrada. Antes pasaba el texto casi sin revisar. Ahora valida:
+- requiere usuario y contrasena
+- guarda historial por workspace
+- permite eliminar feedback guardado
+- registra metricas de uso
+- respeta un limite mensual de analisis
 
-- que exista texto
-- que sea texto real
-- que no este vacio
-- que no supere el maximo permitido
+## Que devuelve la IA
 
-Esto evita errores raros y prepara el proyecto para un uso mas serio.
+Para cada opinion, la solucion intenta generar:
 
-### 4. El backend llama al servicio de IA
-
-El backend envia el texto al microservicio de IA. Ahora esa conexion tiene un tiempo maximo de espera. Si la IA no responde, el backend corta la espera y devuelve un error claro.
-
-Esto es importante porque una aplicacion no deberia quedarse congelada esperando para siempre.
-
-### 5. El servicio de IA analiza
-
-El servicio de IA usa TextBlob para calcular:
-
-- polaridad: si el texto se inclina a positivo o negativo
-- subjetividad: si parece mas opinion que hecho
-- palabras clave: frases o temas detectados
-
-Despues etiqueta el resultado como positivo, negativo o neutro.
-
-### 6. El resultado vuelve a la pantalla
-
-La pantalla recibe la respuesta y muestra:
-
-- veredicto
-- polaridad
+- sentimiento: Positivo, Negativo, Neutro o Mixto
+- score numerico
 - subjetividad
+- confianza
+- tono
+- severidad
+- riesgo de churn
+- impacto
+- resumen
+- accion recomendada
 - palabras clave
-- texto original
+- categorias
 
 ## Que pasa si algo falla
 
-Ahora los errores son mas ordenados:
+El sistema ya maneja errores importantes:
 
-- si falta texto, el usuario recibe un mensaje claro
-- si el texto es demasiado largo, se informa el limite
-- si el servicio de IA no responde, el backend responde con un error entendible
-- si el frontend recibe un error del backend, intenta mostrar ese mensaje
+- texto vacio o invalido
+- falta de sesion
+- opinion demasiado larga
+- errores del proveedor LLM
+- limite 429 de Gemini
+- intentos fallidos registrados como metrica
+
+Esto es valioso porque permite cuidar costos, detectar problemas y entender por que una prueba no respondio.
+

@@ -30,6 +30,11 @@ const DEFAULT_INSIGHTS = {
     { topic: 'billing', count: 15 },
     { topic: 'onboarding', count: 12 },
   ],
+  byArea: [],
+  byChannel: [],
+  bySentiment: [],
+  executiveSummary: '',
+  priority: [],
   recent: [],
 }
 
@@ -511,6 +516,105 @@ function downloadTextFile(filename, content, type = 'text/plain;charset=utf-8') 
   link.download = filename
   link.click()
   URL.revokeObjectURL(url)
+}
+
+function formatReportDate(date = new Date()) {
+  return new Intl.DateTimeFormat('es-AR', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  }).format(date)
+}
+
+function getReviewAction(review) {
+  return review?.analysis?.recommended_action || 'Revisar contexto y definir proxima accion.'
+}
+
+function getReviewSummary(review) {
+  return review?.analysis?.summary || review?.original_text || 'Sin resumen.'
+}
+
+function summarizeCsvResults(results) {
+  const successful = results.filter((item) => item.ok)
+  const failed = results.length - successful.length
+  const highRisk = successful.filter((item) => item.result?.analysis?.churn_risk === 'high').length
+  const reused = successful.filter((item) => item.result?.reused).length
+  const sentimentCounts = successful.reduce((acc, item) => {
+    const label = item.result?.analysis?.label || 'Sin dato'
+    acc[label] = (acc[label] || 0) + 1
+    return acc
+  }, {})
+  const topSentiment = Object.entries(sentimentCounts)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] || 'Sin dato'
+
+  return {
+    total: results.length,
+    successful: successful.length,
+    failed,
+    highRisk,
+    reused,
+    topSentiment,
+  }
+}
+
+function buildWorkspaceReport({ workspace, insights, usage, reviews }) {
+  const totals = insights.totals || DEFAULT_INSIGHTS.totals
+  const usageTotals = usage.totals || DEFAULT_USAGE.totals
+  const priority = Array.isArray(insights.priority) ? insights.priority : []
+  const topTopics = Array.isArray(insights.topTopics) ? insights.topTopics : []
+  const byArea = Array.isArray(insights.byArea) ? insights.byArea : []
+  const bySentiment = Array.isArray(insights.bySentiment) ? insights.bySentiment : []
+  const reportRows = [
+    `# Reporte InsightPulse - ${workspace.name}`,
+    '',
+    `Generado: ${formatReportDate()}`,
+    `Plan: ${workspace.plan}`,
+    '',
+    '## Resumen ejecutivo',
+    '',
+    insights.executiveSummary || 'Todavia no hay datos suficientes para una lectura ejecutiva del periodo.',
+    '',
+    '## Indicadores',
+    '',
+    `- Opiniones guardadas: ${formatNumber(totals.total || 0)}`,
+    `- Riesgo alto: ${formatNumber(totals.highChurnRisk || 0)}`,
+    `- Severidad alta: ${formatNumber(totals.highSeverity || 0)}`,
+    `- Impacto promedio: ${formatNumber(totals.avgImpactScore || 0)}%`,
+    `- Uso del plan: ${formatNumber(totals.total || 0)}/${workspace.monthlyAnalysisLimit || 'sin limite'}`,
+    `- Tokens registrados: ${formatNumber(usageTotals.totalTokens || 0)}`,
+    '',
+    '## Distribucion por sentimiento',
+    '',
+    ...(bySentiment.length
+      ? bySentiment.map((item) => `- ${item.label}: ${formatNumber(item.total)} (${item.rate || 0}%)`)
+      : ['- Sin datos todavia.']),
+    '',
+    '## Areas con mayor atencion',
+    '',
+    ...(byArea.length
+      ? byArea.map((item) => `- ${item.label}: ${formatNumber(item.total)} opiniones, ${formatNumber(item.highChurnRisk || 0)} con riesgo alto, impacto ${formatNumber(item.avgImpactScore || 0)}%.`)
+      : ['- Sin datos todavia.']),
+    '',
+    '## Temas recurrentes',
+    '',
+    ...(topTopics.length
+      ? topTopics.slice(0, 8).map((topic) => `- ${topic.topic}: ${formatNumber(topic.count)} apariciones`)
+      : ['- Sin temas detectados todavia.']),
+    '',
+    '## Prioridades sugeridas',
+    '',
+    ...(priority.length
+      ? priority.map((review, index) => `${index + 1}. ${getReviewSummary(review)} Accion: ${getReviewAction(review)}`)
+      : ['- Sin prioridades todavia.']),
+    '',
+    '## Feedback reciente',
+    '',
+    ...(reviews.length
+      ? reviews.slice(0, 8).map((review) => `- [${review.analysis?.label || 'Sin dato'}] ${getReviewSummary(review)}`)
+      : ['- Sin feedback reciente.']),
+    '',
+  ]
+
+  return reportRows.join('\n')
 }
 
 function isSameDemoInput(review, input) {
@@ -1233,6 +1337,7 @@ function PrivateApp() {
     () => csvRowsWithText.slice(0, MAX_CSV_PROCESS_ROWS),
     [csvRowsWithText],
   )
+  const csvRunSummary = useMemo(() => summarizeCsvResults(csvResults), [csvResults])
 
   useEffect(() => {
     if (!session) return
@@ -1479,6 +1584,19 @@ function PrivateApp() {
     downloadTextFile('insightpulse-resultados.csv', content, 'text/csv;charset=utf-8')
   }
 
+  const handleExportWorkspaceReport = () => {
+    if (!session?.workspace) return
+
+    const report = buildWorkspaceReport({
+      workspace: session.workspace,
+      insights: appInsights,
+      usage: appUsage,
+      reviews: appReviews,
+    })
+
+    downloadTextFile('insightpulse-reporte-ejecutivo.md', report)
+  }
+
   const handleConfirmDeleteReview = async () => {
     if (!session || !deleteCandidate?.id) return
 
@@ -1566,6 +1684,11 @@ function PrivateApp() {
   const usagePercent = monthlyLimit ? clampPercent((usage / monthlyLimit) * 100) : 0
   const usageTotals = appUsage.totals || DEFAULT_USAGE.totals
   const provider429 = appUsage.byProviderStatus?.find((item) => item.label === '429')?.total || usageTotals.rateLimited || 0
+  const remainingAnalyses = monthlyLimit ? Math.max(0, monthlyLimit - usage) : null
+  const csvWillUse = csvRowsToProcess.length
+  const csvLimitWarning = remainingAnalyses !== null && csvWillUse > remainingAnalyses
+    ? `Este lote intenta procesar ${csvWillUse} filas y quedan ${remainingAnalyses} analisis del plan. El backend bloqueara lo que exceda el limite.`
+    : ''
 
   return (
     <main className="private-shell">
@@ -1602,7 +1725,7 @@ function PrivateApp() {
           </div>
           <div className="workspace-badge">
             <span>Analisis del mes</span>
-            <strong>{usage}/{monthlyLimit || '∞'}</strong>
+            <strong>{usage}/{monthlyLimit || 'sin limite'}</strong>
           </div>
         </header>
 
@@ -1631,6 +1754,87 @@ function PrivateApp() {
             <span>Uso del plan</span>
             <strong>{usagePercent}%</strong>
             <p>del limite mensual</p>
+          </article>
+        </section>
+
+        <section className="business-dashboard" aria-label="Lectura ejecutiva del workspace">
+          <article className="executive-panel">
+            <div>
+              <p className="eyebrow">Lectura ejecutiva</p>
+              <h2>Lo que dicen los clientes ahora</h2>
+              <p>{appInsights.executiveSummary || 'Todavia no hay suficientes opiniones para construir una lectura ejecutiva.'}</p>
+            </div>
+            <button type="button" className="ghost-button" onClick={handleExportWorkspaceReport}>
+              Exportar reporte
+            </button>
+          </article>
+
+          <div className="business-grid">
+            <article>
+              <span>Sentimiento</span>
+              <div className="business-list">
+                {(appInsights.bySentiment || []).length === 0 && <p>Sin distribucion todavia.</p>}
+                {(appInsights.bySentiment || []).map((item) => (
+                  <div className="business-row" key={item.label}>
+                    <strong>{item.label}</strong>
+                    <span>{formatNumber(item.total)} / {item.rate || 0}%</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article>
+              <span>Areas criticas</span>
+              <div className="business-list">
+                {(appInsights.byArea || []).length === 0 && <p>Sin areas detectadas.</p>}
+                {(appInsights.byArea || []).slice(0, 4).map((area) => (
+                  <div className="business-row" key={area.label}>
+                    <strong>{area.label}</strong>
+                    <span>{formatNumber(area.highChurnRisk || 0)} riesgo alto</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article>
+              <span>Temas repetidos</span>
+              <div className="business-tags">
+                {(appInsights.topTopics || []).length === 0 && <p>Sin temas todavia.</p>}
+                {(appInsights.topTopics || []).slice(0, 6).map((topic) => (
+                  <mark key={`${topic.topic}-${topic.topic_type || 'topic'}`}>
+                    {topic.topic} · {formatNumber(topic.count)}
+                  </mark>
+                ))}
+              </div>
+            </article>
+          </div>
+
+          <article className="priority-panel">
+            <div className="card-heading horizontal">
+              <div>
+                <p className="eyebrow">Prioridades</p>
+                <h2>Feedback que merece atencion primero</h2>
+              </div>
+              <button type="button" className="ghost-button" onClick={() => navigateApp(appViews.find((view) => view.id === 'history'))}>
+                Ver historial
+              </button>
+            </div>
+
+            <div className="priority-list">
+              {(appInsights.priority || []).length === 0 && (
+                <p className="empty-copy">Cuando haya feedback con riesgo o impacto alto, aparecera en esta lista.</p>
+              )}
+              {(appInsights.priority || []).slice(0, 3).map((review) => (
+                <div className="priority-item" key={review.id}>
+                  <div>
+                    <strong>{review.product_area || 'general'}</strong>
+                    <span>{review.analysis?.label || 'Sin dato'} · Riesgo {formatRisk(review.analysis?.churn_risk)}</span>
+                  </div>
+                  <p>{getReviewSummary(review)}</p>
+                  <small>{getReviewAction(review)}</small>
+                </div>
+              ))}
+            </div>
           </article>
         </section>
 
@@ -1796,7 +2000,25 @@ function PrivateApp() {
           </div>
 
           {csvError && <p className="error-message" role="alert">{csvError}</p>}
+          {csvLimitWarning && <p className="error-message" role="alert">{csvLimitWarning}</p>}
           {csvStatus && <p className="csv-status">{csvStatus}</p>}
+
+          {csvRowsToProcess.length > 0 && (
+            <div className="csv-run-plan" aria-label="Plan de consumo del lote">
+              <div>
+                <span>Filas a procesar</span>
+                <strong>{csvRowsToProcess.length}</strong>
+              </div>
+              <div>
+                <span>Disponibles del plan</span>
+                <strong>{remainingAnalyses ?? 'sin limite'}</strong>
+              </div>
+              <div>
+                <span>Proteccion</span>
+                <strong>limite servidor</strong>
+              </div>
+            </div>
+          )}
 
           {csvPreviewRows.length > 0 && (
             <div className="csv-preview">
@@ -1838,6 +2060,25 @@ function PrivateApp() {
                 </button>
               </div>
 
+              <div className="csv-batch-summary">
+                <article>
+                  <span>Procesadas</span>
+                  <strong>{csvRunSummary.successful}/{csvRunSummary.total}</strong>
+                </article>
+                <article>
+                  <span>Riesgo alto</span>
+                  <strong>{csvRunSummary.highRisk}</strong>
+                </article>
+                <article>
+                  <span>Resultado dominante</span>
+                  <strong>{csvRunSummary.topSentiment}</strong>
+                </article>
+                <article>
+                  <span>Reutilizadas</span>
+                  <strong>{csvRunSummary.reused}</strong>
+                </article>
+              </div>
+
               <div className="csv-result-grid">
                 {csvResults.map((item) => (
                   <article className={`csv-result ${item.ok ? getSentimentData(item.result).className : 'failed'}`} key={item.rowNumber}>
@@ -1850,6 +2091,7 @@ function PrivateApp() {
                       <div className="signal-meta">
                         <span>Riesgo {formatRisk(item.result.analysis.churn_risk)}</span>
                         <span>Impacto {normalizeImpactScore(item.result.analysis.impact_score)}%</span>
+                        {item.result.reused && <span>Sin nueva llamada</span>}
                       </div>
                     )}
                   </article>

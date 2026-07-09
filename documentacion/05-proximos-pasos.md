@@ -1,178 +1,112 @@
 # Proximos pasos
 
-## Objetivo recomendado
+Actualizado al 8 de julio de 2026.
 
-Convertir la aplicacion en una herramienta de insights de feedback.
+## Norte del producto
 
-La idea no seria solamente decir si un comentario es positivo o negativo, sino ayudar a responder preguntas como:
+InsightPulse debe crecer como una herramienta simple para tomar decisiones desde feedback real, no como una demo tecnica de IA.
 
-- de que se quejan mas los usuarios
-- que cosas valoran
-- que temas aparecen seguido
-- si la satisfaccion mejora o empeora con el tiempo
-- que comentarios merecen atencion primero
-
-## Camino 1: Persistencia e historial
-
-Este es el siguiente paso mas natural.
-
-### Que agregaria
-
-- base de datos
-- guardar cada analisis
-- listar analisis anteriores
-- filtrar por sentimiento
-- ordenar por fecha
-- ver detalle de cada comentario
-
-### Por que conviene
-
-Sin historial, la app analiza textos sueltos. Con historial, empieza a convertirse en producto.
-
-## Camino 2: Dashboard
-
-Despues de guardar analisis, se puede crear una vista de resumen.
-
-### Que podria mostrar
-
-- cantidad total de comentarios
-- porcentaje positivos, negativos y neutros
-- sentimiento promedio
-- palabras clave mas repetidas
-- ultimos comentarios analizados
-
-### Por que conviene
-
-Un dashboard transforma datos sueltos en informacion facil de entender.
-
-## Camino 3: Mejor IA
-
-El motor actual esta bien para empezar, pero tiene limites.
-
-### Mejoras posibles
-
-- soporte real para espanol
-- deteccion automatica de idioma
-- clasificacion por categorias
-- resumen automatico de problemas frecuentes
-- explicacion del resultado
-
-### Decision tomada
-
-La direccion elegida es usar un LLM como motor principal de analisis y mantener el motor local como fallback.
-
-Esto permite que el producto entienda mejor:
-
-- contexto
-- ironia
-- comentarios mixtos
-- severidad
-- riesgo de churn
-- acciones recomendadas
-
-### Configuracion del proveedor LLM
-
-El servicio de IA soporta estas variables:
-
-```env
-ANALYSIS_PROVIDER=auto
-GEMINI_API_KEY=tu_api_key
-GEMINI_MODEL=gemini-3.5-flash
-OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.5
-LLM_TIMEOUT_SECONDS=25
-```
-
-En modo `auto`, si existe `GEMINI_API_KEY`, el servicio usa Gemini. Si no hay Gemini pero existe `OPENAI_API_KEY`, usa OpenAI. Si no hay key o el proveedor falla, vuelve al analizador local.
-
-Para la etapa gratuita, la recomendacion es enviar solo textos de prueba, anonimizados o publicos. Antes de analizar datos reales de clientes, conviene pasar a un plan/proveedor con reglas claras de privacidad y no entrenamiento.
-
-### Categorias utiles
-
-Podriamos clasificar comentarios por:
-
-- precio
-- soporte
-- experiencia de usuario
-- rendimiento
-- calidad
-- entrega
-- bugs
-
-## Camino 4: Usuarios y proyectos
-
-Cuando haya historial, puede tener sentido agregar usuarios.
-
-## Camino 5: MVP cloud en Cloudflare
-
-La direccion elegida para escalar el producto es llevar una primera version cloud a Cloudflare.
-
-La arquitectura objetivo es:
+El objetivo del MVP es:
 
 ```text
-Cloudflare Pages
-  -> Cloudflare Worker
-  -> Cloudflare AI Gateway
-  -> Gemini API
-  -> Cloudflare D1
+Subi feedback simple, obtene patrones claros, prioriza acciones y controla el uso.
 ```
 
-La idea es mantener la calidad de Gemini, pero agregar una capa de control con Cloudflare:
+## Prioridad 1: cerrar el plan unipersonal
 
-- API key segura como secret
-- observabilidad de llamadas LLM
-- rate limiting
-- posible cache
-- historial en D1
-- endpoints para dashboard e insights
+El primer plan comercial deberia enfocarse en emprendedores y equipos chicos.
 
-La carpeta `cloudflare-worker/` contiene la base de esta API cloud. Esta separada del backend local para poder avanzar sin romper el laboratorio actual.
+Alcance recomendado:
 
-Endpoints iniciales:
+- carga manual de CSV
+- soporte para Excel
+- soporte para PDF simple
+- resumen ejecutivo por lote
+- deteccion de problemas frecuentes
+- oportunidades detectadas
+- patrones por area/canal
+- historial privado
+- limite mensual visible
+- exportacion simple
 
-- `POST /api/review`: analiza y guarda feedback
-- `GET /api/reviews`: lista historial
-- `GET /api/insights`: resume metricas utiles para decision
+Esto nos permite vender una promesa concreta sin construir todavia una plataforma enterprise.
 
-Cuando este desplegado, el frontend solo debera cambiar `VITE_API_URL` para apuntar al Worker.
+## Prioridad 2: mejorar el dashboard
 
-### Que permitiria
+El dashboard ya empezo a evolucionar de metricas basicas a lectura de negocio.
 
-- login
-- guardar historiales personales
-- separar proyectos o productos
-- comparar feedback entre productos
+Ya existe una primera version con:
 
-### Cuando conviene
+- lectura ejecutiva del periodo
+- distribucion por sentimiento
+- areas criticas
+- temas repetidos
+- prioridades por riesgo e impacto
+- exportacion de reporte
 
-No conviene hacerlo demasiado pronto. Primero deberia existir una razon clara para guardar datos por usuario.
+Luego conviene agregar:
 
-## Camino 5: Deploy
+- problemas mas repetidos
+- oportunidades mas repetidas
+- temas por area
+- riesgo de churn por cliente o segmento
+- evolucion semanal
+- comentarios que merecen respuesta urgente
+- resumen ejecutivo del periodo
 
-Cuando la base este lista, se puede publicar.
+## Prioridad 3: calidad operativa
 
-### Opciones simples
+Antes de sumar muchos usuarios, conviene fortalecer:
 
-- frontend en Vercel o Cloudflare Pages
-- backend en Render, Fly.io o Railway
-- AI service en Render, Fly.io o Railway
-- base de datos en PostgreSQL gestionado
+- pruebas automaticas del Worker
+- pruebas de frontend para flujos criticos
+- validacion mas estricta de payloads
+- rate limiting por workspace
+- manejo de cuota mensual antes de llamar al LLM
+- limpieza/retencion de datos
+- backups/export de D1
+- logs utiles para depurar
 
-## Recomendacion de orden
+## Prioridad 4: usuarios y billing
 
-1. Agregar base de datos e historial.
-2. Crear dashboard basico.
-3. Activar y evaluar el proveedor LLM con casos reales.
-4. Agregar tests automaticos.
-5. Preparar deploy.
-6. Recien despues evaluar usuarios y autenticacion.
+Cuando el flujo de valor este mas claro, sumar:
 
-## Proxima decision concreta
+- registro de usuario
+- alta de workspace
+- cambio de contrasena
+- recuperacion por email
+- Stripe u otro billing
+- bloqueo suave al superar limite mensual
+- upgrade de plan
 
-La pregunta mas importante ahora es:
+## Prioridad 5: integraciones
+
+No conviene empezar por integraciones. Primero debemos validar que el analisis manual produce valor.
+
+Luego podrian venir:
+
+- Google Sheets
+- formularios
+- Zendesk
+- Intercom
+- Slack
+- Webhooks
+- API publica
+
+## Decision recomendada para la siguiente iteracion
+
+Avanzar con una funcionalidad de negocio visible:
 
 ```text
-Queremos que la siguiente version sea mas tecnica y robusta, o mas visual y orientada a producto?
+Resumen ejecutivo por lote CSV con una lectura consolidada del archivo.
 ```
 
-Mi recomendacion: avanzar con persistencia + dashboard basico. Es el punto donde el proyecto empieza a mostrar valor real.
+Por que:
+
+- aprovecha lo que ya existe
+- no requiere billing todavia
+- aumenta mucho el valor percibido
+- ayuda a vender el producto
+- obliga a pensar en patrones, no solo registros individuales
+
+Despues de eso, el siguiente paso natural seria soporte para Excel.

@@ -5,6 +5,7 @@ import {
   deleteReviewById,
   insertReview,
   selectInsights,
+  selectDuplicateReview,
   selectReviews,
   toReviewResponse,
 } from '../repositories/feedback-repository';
@@ -23,10 +24,18 @@ export async function analyzeAndStoreReview(
   workspace: WorkspaceSession,
 ): Promise<unknown> {
   const input = validateReviewInput(body, env);
-  await assertMonthlyLimit(env, workspace);
   const modelName = env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const duplicate = await selectDuplicateReview(env.DB, workspace.workspaceId, input);
+
+  if (duplicate) {
+    return {
+      ...toReviewResponse(duplicate),
+      reused: true,
+    };
+  }
 
   try {
+    await assertMonthlyLimit(env, workspace);
     const { analysis, model, latencyMs, usage } = await analyzeWithGemini(input.text, env, requestId);
     const record = await insertReview(env.DB, {
       id: crypto.randomUUID(),
@@ -87,7 +96,7 @@ export async function analyzeAndStoreReview(
       textLength: input.text.length,
       providerStatus: error instanceof DependencyError ? error.statusCode || null : null,
       latencyMs: extractErrorLatency(error),
-      errorCode: error instanceof DependencyError ? error.code : 'analysis_failed',
+      errorCode: extractErrorCode(error),
       errorMessage: error instanceof Error ? error.message : 'No pudimos analizar el feedback.',
     });
 
@@ -215,6 +224,8 @@ export async function getInsights(
   const insights = await selectInsights(env.DB, workspace.workspaceId, since);
   const totals = insights.totals;
   const total = Number(totals.total || 0);
+  const topRiskArea = insights.byArea[0] || null;
+  const topTopic = insights.topics[0] || null;
 
   return {
     window: {
@@ -237,6 +248,32 @@ export async function getInsights(
       riskRate: total > 0 ? Math.round((Number(totals.high_churn_risk || 0) / total) * 100) : 0,
     },
     topTopics: insights.topics,
+    byArea: insights.byArea.map((area) => ({
+      label: area.label || 'general',
+      total: Number(area.total || 0),
+      highChurnRisk: Number(area.high_churn_risk || 0),
+      avgImpactScore: Math.round(Number(area.avg_impact_score || 0)),
+    })),
+    byChannel: insights.byChannel.map((channel) => ({
+      label: channel.label || 'manual',
+      total: Number(channel.total || 0),
+      negative: Number(channel.negative || 0),
+      mixed: Number(channel.mixed || 0),
+    })),
+    bySentiment: insights.bySentiment.map((sentiment) => ({
+      label: sentiment.label,
+      total: Number(sentiment.total || 0),
+      rate: total > 0 ? Math.round((Number(sentiment.total || 0) / total) * 100) : 0,
+    })),
+    executiveSummary: buildExecutiveSummary({
+      total,
+      highChurnRisk: Number(totals.high_churn_risk || 0),
+      highSeverity: Number(totals.high_severity || 0),
+      riskRate: total > 0 ? Math.round((Number(totals.high_churn_risk || 0) / total) * 100) : 0,
+      topRiskArea: topRiskArea?.label || null,
+      topTopic: topTopic?.topic || null,
+    }),
+    priority: insights.priority.map(toReviewResponse),
     recent: insights.recent.map(toReviewResponse),
   };
 }
@@ -322,4 +359,30 @@ function extractErrorModel(error: unknown, fallbackModel: string): string {
   }
 
   return typeof error.metadata.model === 'string' ? error.metadata.model : fallbackModel;
+}
+
+function extractErrorCode(error: unknown): string {
+  if (error instanceof DependencyError || error instanceof ValidationError) {
+    return error.code;
+  }
+
+  return 'analysis_failed';
+}
+
+function buildExecutiveSummary(input: {
+  total: number;
+  highChurnRisk: number;
+  highSeverity: number;
+  riskRate: number;
+  topRiskArea: string | null;
+  topTopic: string | null;
+}): string {
+  if (!input.total) {
+    return 'Todavia no hay feedback suficiente para construir una lectura ejecutiva del periodo.';
+  }
+
+  const focus = input.topRiskArea ? ` El area que pide mas atencion es ${input.topRiskArea}.` : '';
+  const topic = input.topTopic ? ` El tema mas repetido es ${input.topTopic}.` : '';
+
+  return `Se analizaron ${input.total} opiniones en la ventana seleccionada. Hay ${input.highChurnRisk} senales de churn alto y ${input.highSeverity} casos de severidad alta, con una tasa de riesgo del ${input.riskRate}%.${focus}${topic}`;
 }

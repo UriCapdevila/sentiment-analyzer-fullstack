@@ -1,74 +1,102 @@
 # Despliegue en Cloudflare
 
-Este documento resume como quedo preparado InsightPulse para pasar de una demo local a un servicio desplegable en la nube.
+Actualizado al 8 de julio de 2026.
 
-## Que queda conectado
+## Servicios actuales
 
-El Worker de produccion se llama `insightpulse-api` y esta conectado al repositorio de GitHub:
+InsightPulse usa Cloudflare como base cloud del MVP.
 
-```text
-UriCapdevila/sentiment-analyzer-fullstack
-```
+Servicios activos:
 
-La rama que representa produccion es `main`. Cada cambio que subamos a esa rama puede iniciar un build automatico en Cloudflare.
+- Cloudflare Pages para el frontend
+- Cloudflare Workers para la API
+- Cloudflare D1 para la base de datos
+- Cloudflare AI Gateway para pasar llamadas hacia Gemini
+- Secrets de Cloudflare para claves sensibles
 
-## Como construye Cloudflare el Worker
+## URLs actuales
 
-Cloudflare entra a la carpeta:
-
-```text
-/cloudflare-worker
-```
-
-Luego ejecuta:
-
-```bash
-npm ci && npm run typecheck
-```
-
-Si la validacion pasa, despliega con:
-
-```bash
-npx wrangler deploy
-```
-
-Esto nos da una barrera minima de calidad antes de publicar: el codigo TypeScript tiene que compilar correctamente.
-
-## Que no va al repositorio
-
-Las claves sensibles no se guardan en GitHub. Se cargan como secretos de Cloudflare.
-
-Los secretos relevantes son:
-
-- `GEMINI_API_KEY`: clave del proveedor LLM.
-- `CF_AIG_TOKEN`: token para Cloudflare AI Gateway, si el gateway requiere autenticacion.
-
-El repositorio puede explicar que variables existen, pero nunca debe incluir sus valores reales.
-
-## Flujo recomendado
-
-Para cambios normales de producto:
-
-1. Desarrollar y probar localmente.
-2. Subir cambios a una rama de trabajo o a `staging`.
-3. Validar que el analisis sigue respondiendo bien.
-4. Llevar a `main` solo lo que queremos publicar.
-5. Dejar que Cloudflare haga el build y deploy automatico.
-
-Para un MVP simple, podemos trabajar directo sobre `main` cuando el cambio sea pequeno y este verificado. A medida que el producto crezca, conviene usar `staging` como ambiente previo.
-
-## Siguiente paso: frontend cloud
-
-El Worker ya queda preparado para servir como API cloud. El siguiente paso es conectar el frontend a Cloudflare Pages.
-
-Configuracion esperada para Pages:
+Frontend:
 
 ```text
-Root directory: frontend
-Build command: npm run build
-Output directory: dist
-Environment variable: VITE_API_URL=https://insightpulse-api.uricapdevil4.workers.dev
+https://insightpulse-web.pages.dev
 ```
 
-Cuando Pages entregue su URL publica, hay que agregar esa URL a `ALLOWED_ORIGINS` en el Worker para permitir llamadas desde el frontend desplegado.
+API:
+
+```text
+https://insightpulse-api.uricapdevil4.workers.dev
+```
+
+Base de datos:
+
+```text
+insightpulse-feedback
+```
+
+AI Gateway:
+
+```text
+insightpulse
+```
+
+## GitHub y despliegue
+
+El repositorio es la fuente de verdad del codigo.
+
+Rama de produccion:
+
+```text
+main
+```
+
+Hasta ahora venimos usando dos acciones:
+
+- commit y push a GitHub para guardar el estado del proyecto
+- deploy con Wrangler a Cloudflare para publicar cambios
+
+La direccion recomendada es que Cloudflare quede conectado a GitHub para builds automaticos desde `main`, manteniendo GitHub como fuente de verdad.
+
+## Que no debe subirse al repo
+
+Nunca deben quedar en GitHub:
+
+- claves de Gemini
+- tokens de Cloudflare
+- secretos de AI Gateway
+- contrasenas reales
+- dumps con datos sensibles de clientes
+
+Esos valores deben vivir como secrets de Cloudflare o variables locales no versionadas.
+
+## Limites actuales
+
+Cloudflare Free esta lejos de ser el cuello de botella para este MVP.
+
+El cuello actual es Gemini Free, que ya mostro errores 429 por cuota.
+
+Lectura practica:
+
+- Cloudflare alcanza para seguir desarrollando y testeando el MVP
+- Gemini Free sirve para pruebas controladas
+- al validar producto con mas usuarios, habra que activar billing del proveedor LLM o sumar una estrategia de fallback/cache
+
+## Flujo recomendado de trabajo
+
+Para cambios chicos:
+
+1. Cambiar codigo local.
+2. Probar build/lint/typecheck.
+3. Deploy a Cloudflare.
+4. Validar en URL publica.
+5. Commit y push a GitHub.
+
+Para cambios grandes:
+
+1. Crear rama de trabajo.
+2. Probar local.
+3. Deploy preview/staging.
+4. Revisar visual y funcionalmente.
+5. Merge a `main`.
+6. Deploy productivo.
 

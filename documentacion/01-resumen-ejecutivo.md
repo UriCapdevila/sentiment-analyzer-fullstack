@@ -1,50 +1,80 @@
 # Resumen ejecutivo
 
-## Que hace la solucion
+Actualizado al 8 de julio de 2026.
 
-La aplicacion permite escribir una resena y recibir un analisis automatico del sentimiento. En palabras simples: intenta responder si el comentario tiene una energia positiva, negativa o neutra, y extrae algunas pistas sobre los temas que aparecen.
+## Que es InsightPulse
 
-Ejemplo:
+InsightPulse es una plataforma SaaS en construccion para analizar opiniones de clientes y transformarlas en informacion util para decidir.
+
+En lugar de leer comentarios uno por uno, el producto busca responder preguntas como:
+
+- que problemas aparecen con mas frecuencia
+- que clientes muestran riesgo de abandono
+- que areas del producto generan friccion
+- que oportunidades se repiten
+- que accion conviene tomar primero
+
+## Que hace hoy
+
+La version actual ya permite analizar feedback real con un LLM y guardar los resultados en un workspace privado.
+
+Funciones disponibles:
+
+- landing publica con demo funcional
+- demo sin persistencia real en base de datos
+- panel privado en `/app`
+- login con usuario y contrasena
+- analisis manual de opiniones
+- carga de CSV para lotes chicos
+- historial privado persistido
+- eliminacion de feedback guardado
+- dashboard basico de insights
+- dashboard de negocio por sentimiento, area, temas y prioridades
+- reporte ejecutivo exportable
+- metricas de consumo del LLM
+- despliegue cloud en Cloudflare
+
+## Para quien esta pensado
+
+La primera suscripcion recomendada apunta a emprendedores, founders y equipos chicos que reciben feedback por canales simples:
+
+- planillas
+- encuestas
+- tickets
+- mensajes de soporte
+- formularios
+- resenas
+
+El usuario ideal no necesita una herramienta compleja de customer success. Necesita subir opiniones, entender que pasa y decidir mejor.
+
+## Propuesta de valor
 
 ```text
-I love the user interface and the performance is great.
+InsightPulse convierte feedback disperso en senales claras de riesgo, oportunidad y accion.
 ```
 
-La solucion puede devolver algo como:
+## Estado de madurez
 
-- sentimiento: positivo
-- polaridad: alta hacia lo positivo
-- subjetividad: opinion personal
-- palabras clave: user interface, performance
+El producto esta en etapa MVP temprana, pero ya supero la fase de experimento local.
 
-## Para que sirve hoy
+Hoy cuenta con:
 
-Hoy sirve muy bien como demostracion de una aplicacion fullstack con inteligencia artificial basica:
+- arquitectura cloud operativa
+- base de datos remota
+- autenticacion inicial
+- separacion entre demo y producto real
+- medicion de uso
+- flujo de analisis con Gemini
+- frontend orientado a SaaS
 
-- una pantalla web donde el usuario escribe
-- un backend que ordena y protege la comunicacion
-- un servicio de IA que analiza el texto
-- una respuesta visual con el resultado
+Todavia faltan piezas importantes antes de venderlo como producto completo:
 
-## Para que podria servir si la potenciamos
-
-El salto interesante es dejar de analizar comentarios sueltos y empezar a convertir muchos comentarios en informacion util.
-
-Podria transformarse en una herramienta para:
-
-- analizar resenas de productos
-- entender feedback de usuarios
-- detectar problemas frecuentes
-- medir satisfaccion en el tiempo
-- descubrir temas que se repiten
-- generar reportes simples para tomar decisiones
-
-## Idea de producto recomendada
-
-Reenfocar el proyecto como una plataforma de insights de feedback:
-
-```text
-"Subi o escribi comentarios de usuarios, y la app te dice que sienten, de que hablan y que deberias mirar primero."
-```
-
-Ese enfoque le da mas valor que ser solo un "detector de sentimientos".
+- alta de usuarios desde la app
+- gestion real de suscripciones
+- recuperacion de contrasena
+- permisos por workspace
+- soporte para Excel y PDF
+- filtros avanzados
+- integraciones externas
+- pruebas automaticas mas amplias
+- politicas de retencion de datos

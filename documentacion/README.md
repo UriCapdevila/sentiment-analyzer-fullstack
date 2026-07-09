@@ -1,23 +1,46 @@
-# Documentacion del proyecto
+# Documentacion de InsightPulse
 
-Esta carpeta explica la solucion en lenguaje no tecnico para que puedas ponerte a punto rapido, entender que cambiamos y decidir como seguir.
+Actualizada al 8 de julio de 2026.
+
+Esta carpeta explica el producto en lenguaje no tecnico para tomar decisiones de negocio y de desarrollo sin tener que leer el codigo.
 
 ## Como leer esta documentacion
 
-1. Empeza por `01-resumen-ejecutivo.md` para entender la idea general.
-2. Segui con `02-como-funciona-la-solucion.md` para ver el recorrido de una resena.
-3. Lee `03-secciones-del-sistema.md` para entender que hace cada carpeta.
-4. Revisa `04-cambios-realizados.md` para ver que mejoramos en esta iteracion.
-5. Usa `05-proximos-pasos.md` para decidir hacia donde llevar el producto.
-6. Consulta `06-despliegue-cloudflare.md` para entender como queda conectado el despliegue cloud.
+1. `01-resumen-ejecutivo.md`: que es InsightPulse, para quien sirve y en que estado esta.
+2. `02-como-funciona-la-solucion.md`: recorrido simple desde una opinion hasta un insight.
+3. `03-secciones-del-sistema.md`: que hace cada parte del sistema.
+4. `04-cambios-realizados.md`: avances concretos que ya quedaron implementados.
+5. `05-proximos-pasos.md`: roadmap recomendado para escalar el producto.
+6. `06-despliegue-cloudflare.md`: como estamos usando Cloudflare y GitHub.
+7. `07-foda-2026-07-08.md`: fortalezas, oportunidades, debilidades y amenazas del proyecto hoy.
 
-## Objetivo del proyecto
+## Estado actual
 
-El proyecto toma una resena escrita por una persona y devuelve una lectura rapida sobre su tono:
+InsightPulse ya no es solo una demo de sentimiento. Hoy es la base de un SaaS para convertir opiniones de clientes en senales accionables.
 
-- si suena positiva, negativa o neutra
-- que tan fuerte es esa opinion
-- que tan subjetiva parece
-- que palabras o temas principales aparecen
+La solucion permite:
 
-La version actual ya funciona como una demo fullstack. El enfoque recomendado es evolucionarla hacia una herramienta de insights de feedback: algo que ayude a entender que opinan los usuarios, que temas se repiten y que decisiones conviene tomar.
+- probar una demo publica sin guardar datos reales
+- ingresar a un panel privado con usuario y contrasena
+- analizar feedback manual con Gemini
+- cargar CSV simples desde el panel privado
+- guardar historial por workspace
+- eliminar feedback del historial
+- ver metricas de uso, errores, latencia y tokens
+- ver una lectura ejecutiva del workspace
+- exportar un reporte ejecutivo en Markdown
+- evitar llamadas duplicadas exactas al LLM
+- operar sobre Cloudflare Pages, Workers, D1 y AI Gateway
+
+## Decision de producto vigente
+
+El enfoque recomendado es construir primero una suscripcion unipersonal para emprendedores:
+
+- carga manual de CSV
+- analisis con Gemini
+- resumen ejecutivo
+- deteccion de problemas, oportunidades y patrones
+- historial privado
+- limite mensual de analisis
+- exportacion simple
+- billing en una etapa posterior
